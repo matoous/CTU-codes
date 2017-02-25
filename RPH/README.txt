@@ -1,1 +1,1 @@
-Reversi player got me 6th place. Otherwise nothing special.
+Reversi player was quite good. Otherwise nothing special.
