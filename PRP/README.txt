@@ -1,1 +1,2 @@
-Pls do not upload to Upload system without modification.
+Do not copy noobz.
+Gg ez.
