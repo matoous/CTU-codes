@@ -23,32 +23,35 @@ void load_txt(const char *fname, graph_t *g)
 {
     long length;
     char *buffer;
-    FILE *f = fopen ( fname , "rb" );
-    if(f){
+    // This is actually from stack overflow as the fastest loading method for C
+    FILE *f = fopen ( fname , "rb" ); // open file
+    if(f){ // get size of the file
         fseek(f , 0L , SEEK_END);
         length = ftell(f);
         rewind(f);
     }
-    buffer = calloc(1, length + 1);
-    fread( buffer , length, 1 , f);
-    fclose(f);
-    if (buffer && length)
+    buffer = calloc(1, length + 1); //alloc buffed
+    fread( buffer , length, 1 , f); //read EVERYTHING to the buffer
+    fclose(f); // close file
+    if (buffer && length) // and just check everything was successful
     {
-    printf("%li fs\n", length);
         int n1, n2, cost;
         int m = -1;
         int i = 0;
         edge_t *e = g->edges;
         while(i < length){
             n1 = n2 = cost = 0;
+            // node 1
             while(buffer[i] < 58 && buffer[i] > 47){
                 n1 *= 10; n1 += (buffer[i++] - SHIFT);
             }
             i++;
+            // node 2
             while(buffer[i] < 58 && buffer[i] > 47){
                 n2 *= 10; n2 += (buffer[i++] - SHIFT);
             }
             i++;
+            // cost
             while(buffer[i] < 58 && buffer[i] > 47 && i < length){
                 cost *= 10; cost += (buffer[i++] - SHIFT);
             }
@@ -69,17 +72,19 @@ void load_txt(const char *fname, graph_t *g)
         g->num_nodes = m;
         free(buffer);
     }
-   //print_graph(g);
+    //print_graph(g); // for debug purpouses
 }
 
 /* Save the graph to the text file. */
 void save_txt(const graph_t * const graph, const char *fname){
+    // it is faster to do this with buffer, but I will not make it that easy for ya
     FILE *f = fopen(fname, "w");
+    // st for string and st_c for string letters count
     char st[9];
     short st_c = 0;
     int n;
     for(int i = 0; i < graph->num_edges; ++i){
-        const edge_t *const edge = &(graph->edges[i]);
+        const edge_t *const edge = &(graph->edges[i]); // do not copy
         n = edge->from;
         if(n == 0){
             st[st_c++] = '0';
