@@ -11,9 +11,10 @@ package cz.cvut.fel.pjv;
  */
 public class NodeImpl implements Node{
 
+    // setters would be better
     public Node leftn;
     public Node rightn;
-    public int value;
+    private int value;
     
     @Override
     public Node getLeft() {
