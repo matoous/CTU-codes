@@ -57,7 +57,7 @@ public class CircularArrayQueue implements Queue {
             return false;
         }
         else{
-            this.end = (this.end++ == this.capacity) ? 0 : this.end;
+            this.end = (++this.end == this.capacity) ? 0 : this.end;
             this.elements[this.end] = obj;
             this.element_count++;
             return true;
