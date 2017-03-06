@@ -77,7 +77,7 @@ public class CircularArrayQueue implements Queue {
     @Override
     public void printAllElements() {
         for(int i = 0; i < this.element_count; i++){
-            System.out.println(this.elements[(i+this.rear >= this.capacity)?(i-this.capacity+this.rear):(i+this.rear)]);
+            System.out.println(this.elements[(i+this.rear >= this.capacity)?(i-this.capacity+this.rear):(i+this.rear)]); // huehue
         }
     }
 }
