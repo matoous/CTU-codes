@@ -2,12 +2,13 @@ package cz.cvut.fel.pjv;
 
 public class BruteForceAttacker extends Thief {
     
-    char[] letters = getCharacters();
+    char[] letters;
     int sp;
     
     @Override
     public void breakPassword(int sizeOfPassword) {
         sp = sizeOfPassword;
+        letters = getCharacters();
         char[] did = new char[sizeOfPassword];
         if(sizeOfPassword == 0) tryOpen(did);
         else{
