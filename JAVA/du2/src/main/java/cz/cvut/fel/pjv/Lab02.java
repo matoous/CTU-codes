@@ -1,7 +1,7 @@
 /*
  * File name: Lab06.java
  * Date:      2014/08/26 21:39
- * Author:    @author
+ * Author:    @matoous
  */
 
 package cz.cvut.fel.pjv;
