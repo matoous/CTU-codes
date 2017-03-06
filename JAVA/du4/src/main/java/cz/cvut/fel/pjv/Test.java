@@ -3,7 +3,7 @@ package cz.cvut.fel.pjv;
 public class Test {
     
     public void start() {
-        String password = "";
+        String password = ""; // this one got me on first upload
         BruteForceAttacker attacker = new BruteForceAttacker();
         attacker.init(new char[]{'a', 'b', 'c', 'd'}, password);
         
