@@ -162,7 +162,7 @@ int main(int argc, char *argv[]){
                 fputs("Error: Chybny vstup!\n", stderr);
                 return 100;
             }
-            switch(c){
+            switch(c){ // do not copy this pls, this is stupid
                 case '0':
                     arr[inputs_count][arr_count[inputs_count]++] = 0;
                     break;
