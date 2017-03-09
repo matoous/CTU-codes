@@ -4,12 +4,6 @@
 #define t3 $11
 #define t4 $12
 
-#define k1 $31
-#define k2 $32
-#define k3 $33
-#define k4 $34
-#define k5 $35
-
 #define s0 $16
 #define s1 $17
 #define s2 $18
@@ -34,37 +28,36 @@ pole:
 
 start:
 la s0, pole  
-// init loop 1
-addi z, $0, 1 // pernamentni 1
-addi s1, $0, 0  // i = 0
-addi s2, $0, 5  // delka pole
+addi z, $0, 1
+addi s1, $0, 0
+addi s2, $0, 5
 for1:
-	beq s1, s2, done1  // if loop 1 end
-	addi s3, $0, 0  // j = 0
-	addi s4, $0, 0  // horni mez loop 2
-	addi s4, s2, 0  // horni mez loop 2 = N
-	sub s4, s4, 1  // horni mez loop 2 -= 1
-	sub s4, s4, s1	 // horni mez loop 2 -= i
+	beq s1, s2, done1
+	addi s3, $0, 0
+	addi s4, $0, 0
+	addi s4, s2, 0
+	sub s4, s4, 1
+	sub s4, s4, s1
 	for2:
-		beq s3, s4, done2  // if loop2 end
-		lw t0, 0x0(s0)  // nacte z pole prvek N
-                addi s0, s0, 0x4  // posun v poli o 1
-                lw t1, 0x0(s0)  // nacte z pole prvek N+1
-                slt t2, t1, t0  // porovno jestli je t1 mensi t2
+		beq s3, s4, done2
+		lw t0, 0x0(s0)
+                addi s0, s0, 0x4
+                lw t1, 0x0(s0)
+                slt t2, t1, t0
                 beq t2, z, ifend
-			add t3, $0, t1  // temp = pole n+1
-                        add t1, $0, t0  // pole n+1 = pole n
-                        add t0, $0, t3  // pole n  = temp
+			add t3, $0, t1
+                        add t1, $0, t0
+                        add t0, $0, t3
 		ifend:
-                sw t1, 0x0(s0) // uloz pole[n+1]
-		sub s0, s0, 0x4  // prejdi na pole [n]
-		sw t0, 0x0(s0)  // uloz pole[n]
-                addi s0, s0, 0x4 // prejdi na pole[n]
-		addi s3, s3, 1  // j++
-                j for2  // repeat loop 2
+                sw t1, 0x0(s0)
+		sub s0, s0, 0x4
+		sw t0, 0x0(s0)
+                addi s0, s0, 0x4
+		addi s3, s3, 1
+                j for2
 	done2:
-	addi s1, s1, 1  // i++
-        j for1  // repeat loop 1
+	addi s1, s1, 1
+        j for1
 done1:
 nop
 .end start
