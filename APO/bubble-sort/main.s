@@ -1,3 +1,5 @@
+// made some updates and did not test it, so be careful
+
 .globl    array
 .data
 .align    2
