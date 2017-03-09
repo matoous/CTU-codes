@@ -25,8 +25,8 @@ for1:
 		lw $8, 0x0($16)  // load array[N]
                 addi $16, $16, 0x4  // N+1
                 lw $9, 0x0($16)  // load array[N+1]
-                slt $10, $8, $9  // array[N+1] < array[N]
-                beq $10, $30, ifend  // if upper if is ok
+                slt $10, $9, $8  // array[N+1] < array[N]
+                beq $10, $30, ifend
 			add $11, $0, $9  // switch
                         add $9, $0, $8  // switch
                         add $8, $0, $11  // switch
