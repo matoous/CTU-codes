@@ -1,7 +1,7 @@
 from time import time
 
 class MyPlayer:
-    """<img src='http://tinyurl.com/jjy5a6b' alt='Alpha beta pruning'></h2>"""
+    """<img src='http://tinyurl.com/jjy5a6b' alt='Alpha beta pruning'>"""
 
     #  Scores for individual fields
     score_board = [[99, -12, 8, 6, 6, 8, -12, 99], [-12, -24, -4, -3, -3, -4, -24, -12], [8, -4, 7, 4, 4, 7, -4, 8],
