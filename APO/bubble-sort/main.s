@@ -1,60 +1,44 @@
-#define t0 $8
-#define t1 $9
-#define t2 $10
-#define t3 $11
-#define t4 $12
-
-#define s0 $16
-#define s1 $17
-#define s2 $18
-#define s3 $19
-#define s4 $20
-#define s5 $21
-#define s6 $22
-#define z $30
-
-
-.globl    pole
+.globl    array
 .data
 .align    2
 
-pole:
-.word    5,3,4,1,2
+array:
+.word    5,3,8,9,4,1,2,7,6
 
 .text
 .globl start
 .ent start
 
 start:
-la s0, pole  // save array addr
-addi z, $0, 1  // create const. 1
-addi s1, $0, 0  // i = 0
-addi s2, $0, 5  // i < 5
+la $16, array  // save array addr
+addi $30, $0, 1  // create const. 1
+addi $17, $0, 0  // i = 0
+addi $18, $0, 9  // i < 9
 for1:
-	beq s1, s2, done1  // if i == 5 jump
-	addi s3, $0, 0  // j = 0
-	addi s4, s2, 0  // j < 5
-	sub s4, s4, 1  // j < 5 - 1
-	sub s4, s4, s1  // j < 5 - 1 - i
+	beq $17, $18, done1  // if i == 9 jump
+	addi $19, $0, 0  // j = 0
+	addi $20, $18, 0  // j < 9
+	sub $20, $20, 1  // j < 9 - 1
+	sub $20, $20, $17  // j < 9 - 1 - i
 	for2:
-		beq s3, s4, done2  // j == 5 - 1 - i
-		lw t0, 0x0(s0)  // load array[N]
-                addi s0, s0, 0x4  // N+1
-                lw t1, 0x0(s0)  // load array[N+1]
-                slt t2, t1, t0  // array[N+1] < array[N]  -- not sure
-                beq t2, z, ifend  // if upper if is ok
-			add t3, $0, t1  // switch
-                        add t1, $0, t0  // switch
-                        add t0, $0, t3  // switch
+		beq $19, $20, done2  // j == 9 - 1 - i
+		lw $8, 0x0($16)  // load array[N]
+                addi $16, $16, 0x4  // N+1
+                lw $9, 0x0($16)  // load array[N+1]
+                slt $10, $9, $8  // array[N+1] < array[N]  -- not sure
+                beq $10, $30, ifend  // if upper if is ok
+			add $11, $0, $9  // switch
+                        add $9, $0, $8  // switch
+                        add $8, $0, $11  // switch
 		ifend:
-                sw t1, 0x0(s0)
-		sub s0, s0, 0x4
-		sw t0, 0x0(s0)
-                addi s0, s0, 0x4
-		addi s3, s3, 1
+                sw $9, 0x0($16)
+		sub $16, $16, 0x4
+		sw $8, 0x0($16)
+                addi $16, $16, 0x4
+		addi $19, $19, 1
                 j for2
 	done2:
-	addi s1, s1, 1
+	addi $17, $17, 1
         j for1
 done1:
 nop
