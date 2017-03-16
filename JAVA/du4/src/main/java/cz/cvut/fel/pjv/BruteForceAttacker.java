@@ -24,7 +24,7 @@ public class BruteForceAttacker extends Thief {
         else{
             for (int i = 0; i < letters.length; i++) {
                 did[did_len] = letters[i];
-                if(proceedInRecursion(did, did_len+1, todo-1)) return true;
+                if(proceedInRecursion(did, did_len+1)) return true;
             }
         }
         return false;
