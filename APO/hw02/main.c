@@ -1,12 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-#include <math.h>
- 
-#ifdef DEBUG
-#include <time.h>
-#endif
- 
+
 typedef struct {
     unsigned char red,green,blue;
 } PPMPixel;
@@ -14,7 +8,6 @@ typedef struct {
 #define RGB_COMPONENT_COLOR 255
  
 int main(int argc, char* argv[]){
-	
  
     char buff[16];
     FILE *fp;
@@ -97,7 +90,7 @@ int main(int argc, char* argv[]){
  
     // write output.ppm
     fp = fopen("output.ppm", "wb");
-    fprintf(fp, "P6\n%d\n%d\n%d\n",x,y,RGB_COMPONENT_COLOR);
+    fprintf(fp, "P6\n%d\n%d\n255\n",x,y);
     fwrite(new_img, 3 * x, y, fp);
     fclose(fp);
  
