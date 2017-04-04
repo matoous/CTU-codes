@@ -1,1 +1,1 @@
-.
+Windows is bullshit.
