@@ -11,6 +11,7 @@ public class BruteForceAttacker extends Thief {
         letters = getCharacters();
         char[] did = new char[sizeOfPassword];
         if(sizeOfPassword == 0) tryOpen(did);
+        int did_len = 0;
         else{
             for(int i = 0; i < letters.length; i++){
                 did[0] = letters[i];
