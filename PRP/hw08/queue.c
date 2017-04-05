@@ -26,9 +26,7 @@ bool push_to_queue(queue_t *queue, void *data){
     if(queue->counter == queue->capacity){
         queue->capacity *= 2;
         void **temp_arr = (void**)realloc(queue->arr,queue->capacity*(sizeof(void*)));
-        if(temp_arr == NULL){
-            return false;
-        }
+        if(temp_arr == NULL) return false;
         queue->arr = temp_arr;
         if(queue->last < queue->first){
             int index = 0;
@@ -46,9 +44,7 @@ bool push_to_queue(queue_t *queue, void *data){
         queue->last++;
         queue->counter++;
     } else{
-        if(queue->last + 1 == queue->capacity){
-            queue->last = -1;
-        }
+        if(queue->last + 1 == queue->capacity) queue->last = -1;
         queue->arr[++queue->last] = data;
         queue->counter++;
     }
@@ -108,9 +104,7 @@ void* get_from_queue(queue_t *queue, int idx){
         return NULL;
     }
     int index = queue->first + idx;
-    if(index >= queue->capacity){
-        index -= queue->capacity;
-    }
+    if(index >= queue->capacity) index -= queue->capacity;
     return queue->arr[index];
 }
  
