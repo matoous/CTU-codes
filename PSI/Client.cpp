@@ -109,6 +109,7 @@ bool sendBuffer(const char* s) {
 	return tries < 8;
 }
 
+// By Matous Dzivjak (dzivjmat@fel.cvut.cz), take a look, write your own, don't be lame
 int _tmain(int argc, _TCHAR* argv[])
 {
 
