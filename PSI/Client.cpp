@@ -200,7 +200,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 
 	// close socket
-	char _;
-	cin >> _;
+	system("pause");
 	return 0;
 }
