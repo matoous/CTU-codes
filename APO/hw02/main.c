@@ -7,6 +7,8 @@ typedef struct {
 
 #define RGB_COMPONENT_COLOR 255
 
+// By Matous Dzivjak
+// Dont be lame, make your own
 int main(int argc, char* argv[]){
 
     // open given file
