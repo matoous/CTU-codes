@@ -10,9 +10,14 @@
 /* CRC-32C (iSCSI) polynomial in reversed bit order. */
 #define POLY 0x82f63b78
 
+/* Pragma */
+#pragma comment(lib, "ws2_32.lib")
+#pragma warning(disable: 4996)
+
+using namespace std;
+
 /* CRC-32 (Ethernet, ZIP, etc.) polynomial in reversed bit order. */
 /* #define POLY 0xedb88320 */
-
 uint32_t crc32c(uint32_t crc, const char *buf, size_t len)
 {
 	int k;
@@ -26,16 +31,13 @@ uint32_t crc32c(uint32_t crc, const char *buf, size_t len)
 	return ~crc;
 }
 
-#pragma comment(lib, "ws2_32.lib")
-#pragma warning(disable: 4996)
-
-using namespace std;
-
+/* Init win socket */
 void InitWinsock(){
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
 }
 
+// by Matous Dzivjak (dzivjmat@fel.cvut.cz)
 int _tmain(int argc, _TCHAR* argv[])
 {
 	// SETUP, do not tuch!
@@ -71,11 +73,14 @@ int _tmain(int argc, _TCHAR* argv[])
 				check_crc = (check_crc << 8) + (unsigned char)buffer[n];
 			uint32_t crc = 0;
 			crc = crc32c(crc, buffer, 4096 - 4);
+			// Bad CRC
 			if (check_crc != crc) {
 				sendto(socketS, "BAD_____________", 16, 0, (sockaddr*)&from, fromlen);
 				continue;
 			}
+			// Ok CRC
 			else {
+				// NAME packet
 				if (strncmp(buffer, "NAME", 4) == 0) {
 					printf("Received NAME packet\n");
 					int l = 0;
@@ -84,6 +89,7 @@ int _tmain(int argc, _TCHAR* argv[])
 						if (buffer[i] == '\0') break;
 					}
 				}
+				// SIZE packet
 				else if (strncmp(buffer, "SIZE", 4) == 0) {
 					printf("Received SIZE packet\n");
 					file_size = 0;
@@ -94,10 +100,12 @@ int _tmain(int argc, _TCHAR* argv[])
 						file_size += buffer[i++] - '0';
 					}
 				}
+				// START packet
 				else if (strncmp(buffer, "START", 5) == 0) {
 					printf("Received START packet\n");
 					incomming_bytes = (char*)malloc(file_size * sizeof(char));
 				}
+				// DATA packet
 				else if (strncmp(buffer, "DATA", 4) == 0) {
 					uint32_t offset = 0;
 					for (int n = 0; n < 4; n++)
@@ -114,6 +122,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 					printf("Received DATA packet with offset: %u\n", offset);
 				}
+				// STOP packet
 				else if (strncmp(buffer, "STOP", 4) == 0) {
 					printf("Received STOP packet.\n");
 					printf("Writing file.\n");
@@ -126,7 +135,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 	}
 	closesocket(socketS);
-
 	return 0;
 }
 
