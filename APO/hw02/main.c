@@ -43,7 +43,7 @@ int main(int argc, char* argv[]){
     }
     // body - rows
     register short u = 2;
-    for(;i < xy-y; i++, u++){
+    for(;i < xy-x; i++, u++){
         // copy first pixel
         new_img[i] = img[i];
         r = (0.2126*new_img[i].red + 0.7152*new_img[i].green + 0.0722*new_img[i].blue + 0.5)/51;
