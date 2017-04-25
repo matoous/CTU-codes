@@ -7,6 +7,8 @@
 #include <iomanip>
 #include <iostream>
 #include <stddef.h>
+#include <chrono>
+#include <thread>
 #include <stdint.h>
 #include "md5.h"
 
@@ -16,6 +18,7 @@
 /* NAMESPACE */
 using namespace std;
 
+unsigned int sleep_time = 0;
 
 /* CRC-32C (iSCSI) polynomial in reversed bit order. */
 #define POLY 0x82f63b78
@@ -76,7 +79,7 @@ vector<unsigned char> intToBytes(uint32_t paramInt)
 }
 
 /* send string */
-bool sendBuffer(const char* s) {
+bool sendString(const char* s) {
 	// init variables
 	int tries = 0;
 	char back_buff[16];
@@ -103,6 +106,13 @@ bool sendBuffer(const char* s) {
 			{
 				back_buff[15] = '\0';
 				printf("Receive response from server: %s\n", back_buff);
+				// adjust speed if needed
+				if (strncmp(back_buff, "OKSS", 4) == 0) {
+					uint32_t bps = 0;
+					for (int n = 0; n < 4; n++)
+						bps = (bps << 8) + (unsigned char)back_buff[n + 4];
+					sleep_time = round(((float)4096 / bps) * 1000);
+				}
 			}
 		}
 	} while (strncmp(back_buff, "OK", 2) != 0 && tries != 8);
@@ -115,7 +125,6 @@ bool sendBuffer(const char* s) {
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-
 	// setup
 	InitWinsock();
 	len = sizeof(serverInfo);
@@ -150,7 +159,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	// send file name
 	ZeroMemory(str, sizeof(str));
 	sprintf(str, "NAME=%s", fname.c_str());
-	if (!sendBuffer(str)) {
+	if (!sendString(str)) {
 		cout << "Error sending NAME packet" << endl;
 		return 0;
 	}
@@ -159,7 +168,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	ZeroMemory(str, sizeof(str));
 	sprintf(str, "SIZE=%ld", file_bytes.size());
 	cout << "file size " << file_bytes.size() << endl;
-	if (!sendBuffer(str)) {
+	if (!sendString(str)) {
 		cout << "Error sending SIZE packet" << endl;
 		return 0;
 	}
@@ -172,7 +181,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	}
 	str[5 + hashed.size()] = '\0';
 	cout << "sanding hash " << str << endl;
-	if (!sendBuffer(str)) {
+	if (!sendString(str)) {
 		cout << "Error sending HASH packet" << endl;
 		return 0;
 	}
@@ -180,7 +189,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	// start file transmit
 	ZeroMemory(str, sizeof(str));
 	sprintf(str, "START");
-	if (!sendBuffer(str)) {
+	if (!sendString(str)) {
 		cout << "Error sending START packet" << endl;
 		return 0;
 	}
@@ -188,6 +197,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	// transmit
 	uint32_t offset = 0;
 	char buffer2[4096];
+	char backbuffer[16];
 	while (offset < file_bytes.size()) {
 		buffer2[0] = 'D';
 		buffer2[1] = 'A';
@@ -209,23 +219,40 @@ int _tmain(int argc, _TCHAR* argv[])
 		for (int i = 4092; i < 4096; i++) {
 			buffer2[i] = crc_bytes[i - 4092];
 		}
-		// send
-		if (sendto(socketC, buffer2, sizeof(buffer2), 0, (sockaddr*)&serverInfo, len) != SOCKET_ERROR)
-		{
-			if (recvfrom(socketC, buffer2, sizeof(buffer2), 0, (sockaddr*)&serverInfo, &len) != SOCKET_ERROR)
-			{
-				//buffer2[15] = '\0';
-				//printf("Receive response from server: %s\n", buffer2);
+		// try sanding, max five times
+		int tries = 0;
+		do {
+			// adjust speed if needed
+			if (strncmp(backbuffer, "OKSS", 4) == 0) {
+				uint32_t bps = 0;
+				for (int n = 0; n < 4; n++)
+					bps = (bps << 8) + (unsigned char)backbuffer[n + 4];
+				sleep_time = round(((float)4096/bps) * 1000);
+				cout << sleep_time << endl;
 			}
+			tries++;
+			if (sendto(socketC, buffer2, sizeof(buffer2), 0, (sockaddr*)&serverInfo, len) != SOCKET_ERROR)
+			{
+				if (recvfrom(socketC, backbuffer, sizeof(backbuffer), 0, (sockaddr*)&serverInfo, &len) != SOCKET_ERROR)
+				{
+					backbuffer[15] = '\0';
+					printf("Receive response from server: %s\n", backbuffer);
+				}
+			}
+		} while (strncmp(backbuffer, "OK", 2) != 0 && tries != 8);
+		if (tries == 8) {
+			cout << "error while sending file" << endl;
+			exit(1);
 		}
 		offset += 4096 - 12;
 		ZeroMemory(buffer2, sizeof(buffer2));
+		std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
 	}
 
 	// end file transmit
 	ZeroMemory(str, sizeof(str));
 	sprintf(str, "STOP");
-	if (!sendBuffer(str)) {
+	if (!sendString(str)) {
 		cout << "Error sending STOP packet" << endl;
 		return 0;
 	}
