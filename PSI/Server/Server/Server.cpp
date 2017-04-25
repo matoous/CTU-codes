@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <Windows.h>
+#include <cstdlib>
 #include "md5.h"
 
 /* CRC-32C (iSCSI) polynomial in reversed bit order. */
@@ -38,6 +39,15 @@ using namespace std;
 void InitWinsock(){
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
+}
+
+/* convert int to bytes */
+vector<unsigned char> intToBytes(uint32_t paramInt)
+{
+	vector<unsigned char> arrayOfByte(4);
+	for (int i = 0; i < 4; i++)
+		arrayOfByte[3 - i] = (paramInt >> (i * 8));
+	return arrayOfByte;
 }
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -82,7 +92,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				fails_in_row++;
 				if (fails_in_row == 8) {
 					cout << "transition failed" << endl;
-					free(incomming_bytes);
 				}
 				sendto(socketS, "BAD_____________", 16, 0, (sockaddr*)&from, fromlen);
 				continue;
@@ -112,7 +121,6 @@ int _tmain(int argc, _TCHAR* argv[])
 				else if (strncmp(buffer, "START", 5) == 0) {
 					printf("Received START packet\n");
 					incomming_bytes = (char*)malloc(file_size * sizeof(char));
-					re_message = "OK______________";
 				}
 				else if (strncmp(buffer, "DATA", 4) == 0) {
 					uint32_t offset = 0;
@@ -128,7 +136,21 @@ int _tmain(int argc, _TCHAR* argv[])
 							incomming_bytes[i + offset] = buffer[i + 8];
 						}
 					}
-					re_message = "OK______________";
+
+					// TESTING
+					int opt = rand() & 1;
+					if (opt) {
+						vector<unsigned char> numb = intToBytes((rand() % 2000) * 10);
+						char re[16] = "OKSS___________";
+						for (int i = 0; i < 4; i++) {
+							re[i + 4] = numb[i];
+						}
+						re_message = re;
+					}
+					else {
+						re_message = "OK______________";
+					}
+					// END TESTING
 				}
 				else if (strncmp(buffer, "HASH", 4) == 0) {
 					printf("Received HASH packet\n");
