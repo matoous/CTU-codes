@@ -18,6 +18,82 @@
 /* NAMESPACE */
 using namespace std;
 
+typedef struct frame_t {
+	uint32_t data_offset;
+	chrono::time_point<chrono::system_clock> time;
+	bool ack;
+	unsigned char attempts;
+} frame_t;
+
+typedef struct window_t {
+	uint16_t size;
+	vector<frame_t> window;
+	uint16_t front, end, elements;
+} window_t;
+
+window_t initWindow(int s) {
+	window_t w;
+	w.size = s;
+	w.window.resize(w.size);
+	w.front = w.elements = 0;
+	w.end = -1;
+	return w;
+}
+
+bool windowAddTry(window_t* W, uint32_t noff) {
+	int idx = (*W).front;
+	for (int u = 0; u < (*W).elements; u++) {
+		if ((*W).window[idx].data_offset == noff) {
+			(*W).window[idx].attempts++;
+			if ((*W).window[idx].attempts == 8)
+				return false;
+		}
+	}
+	return true;
+}
+
+bool windowFull(window_t* W) {
+	return (*W).elements == (*W).size;
+}
+
+bool windowEmpty(window_t* W) {
+	return (*W).elements == 0;
+}
+
+bool windowAdd(window_t* W, frame_t F) {
+	if (windowFull(W))
+		return false;
+	else {
+		(*W).end++;
+		if ((*W).end == (*W).size)
+			(*W).end = 0;
+		(*W).window[(*W).end] = F;
+		(*W).elements++;
+	}
+}
+
+void windowAck(window_t* W, uint32_t off) {
+	int idx = (*W).front;
+	for (int u = 0; u < (*W).elements; u++) {
+		if ((*W).window[idx].data_offset == off) {
+			(*W).window[idx].ack = true;
+			printf("Successfuly ACK frame with offset %u index %d in the window\n", off, idx);
+			if (idx == (*W).front) {
+				printf("Removing from Window\n");
+				while ((*W).elements != 0 && (*W).window[(*W).front].ack) {
+					(*W).front++;
+					if ((*W).front == (*W).size)
+						(*W).front = 0;
+					(*W).elements--;
+				}
+			}
+		}
+		idx++;
+		if (idx == (*W).size)
+			idx = 0;
+	}
+}
+
 unsigned int sleep_time = 0;
 
 /* CRC-32C (iSCSI) polynomial in reversed bit order. */
@@ -77,6 +153,29 @@ vector<unsigned char> intToBytes(uint32_t paramInt)
 		arrayOfByte[3 - i] = (paramInt >> (i * 8));
 	return arrayOfByte;
 }
+
+bool sendData(const char* s) {
+	// init variables
+	int tries = 0;
+	char back_buff[16];
+	char buffer[4096];
+	ZeroMemory(buffer, sizeof(buffer));
+
+	// print string to buffer
+	for (int i = 0; i < 4092; i++)
+		buffer[i] = s[i];
+
+	// compute crc
+	uint32_t crc = 0;
+	crc = crc32c(crc, buffer, 4092);
+	vector<unsigned char> crc_bytes = intToBytes(crc);
+	for (int i = 4092; i < 4096; i++) {
+		buffer[i] = crc_bytes[i - 4092];
+	}
+
+	return sendto(socketC, buffer, sizeof(buffer), 0, (sockaddr*)&serverInfo, len) != SOCKET_ERROR;
+}
+
 
 /* send string */
 bool sendString(const char* s) {
@@ -148,7 +247,6 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	str2.assign((std::istreambuf_iterator<char>(t)),
 		std::istreambuf_iterator<char>());
-	cout << str2 << endl;
 	string hashed = md5(str2);
 
 	// read file bytes
@@ -197,56 +295,81 @@ int _tmain(int argc, _TCHAR* argv[])
 	// transmit
 	uint32_t offset = 0;
 	char buffer2[4096];
-	char backbuffer[16];
-	while (offset < file_bytes.size()) {
-		buffer2[0] = 'D';
-		buffer2[1] = 'A';
-		buffer2[2] = 'T';
-		buffer2[3] = 'A';
-		// offset
-		vector<unsigned char> offset_bytes = intToBytes(offset);
-		for (int i = 0; i < 4; i++) {
-			buffer2[i+4] = offset_bytes[i];
-		}
-		// data
-		for (int i = 0; i < ((4096 - 12 < file_bytes.size() - offset) ? (4096-12) : (file_bytes.size() - offset)); i++) {
-			buffer2[i+8] = file_bytes[i + offset];
-		}
-		// CRC
-		uint32_t crc = 0;
-		crc = crc32c(crc, buffer2, 4092);
-		vector<unsigned char> crc_bytes = intToBytes(crc);
-		for (int i = 4092; i < 4096; i++) {
-			buffer2[i] = crc_bytes[i - 4092];
-		}
-		// try sanding, max five times
-		int tries = 0;
-		do {
-			// adjust speed if needed
-			if (strncmp(backbuffer, "OKSS", 4) == 0) {
-				uint32_t bps = 0;
-				for (int n = 0; n < 4; n++)
-					bps = (bps << 8) + (unsigned char)backbuffer[n + 4];
-				sleep_time = round(((float)4096/bps) * 1000);
-				cout << sleep_time << endl;
+	window_t W = initWindow(4);
+	char back_buff[16];
+
+	while (offset < file_bytes.size() || !windowEmpty(&W)) {
+		printf("Window ele: %u\n", W.elements);
+		if (!windowFull(&W) && offset < file_bytes.size()) {
+			buffer2[0] = 'D';
+			buffer2[1] = 'A';
+			buffer2[2] = 'T';
+			buffer2[3] = 'A';
+			// offset
+			vector<unsigned char> offset_bytes = intToBytes(offset);
+			for (int i = 0; i < 4; i++) {
+				buffer2[i + 4] = offset_bytes[i];
 			}
-			tries++;
-			if (sendto(socketC, buffer2, sizeof(buffer2), 0, (sockaddr*)&serverInfo, len) != SOCKET_ERROR)
-			{
-				if (recvfrom(socketC, backbuffer, sizeof(backbuffer), 0, (sockaddr*)&serverInfo, &len) != SOCKET_ERROR)
-				{
-					backbuffer[15] = '\0';
-					printf("Receive response from server: %s\n", backbuffer);
+			// data
+			for (int i = 0; i < ((4096 - 12 < file_bytes.size() - offset) ? (4096 - 12) : (file_bytes.size() - offset)); i++) {
+				buffer2[i + 8] = file_bytes[i + offset];
+			}
+			if (!sendData(buffer2)) {
+				cout << "Error sending DATA packet" << endl;
+				return 0;
+			}
+
+			frame_t nf;
+			nf.ack = false;
+			nf.data_offset = offset;
+			nf.time = chrono::system_clock::now();
+			nf.attempts = 1;
+			windowAdd(&W, nf);
+			printf("Send data off %u\n", nf.data_offset);
+			offset += 4096 - 12;
+			ZeroMemory(buffer2, sizeof(buffer2));
+		}
+		else {
+			printf("Waiting for ACK\n");
+			if (recvfrom(socketC, back_buff, sizeof(back_buff), 0, (sockaddr*)&serverInfo, &len) != SOCKET_ERROR) {
+				if (strncmp(back_buff, "ACK", 3) == 0) {
+					uint32_t noff = 0;
+					for (int n = 0; n < 4; n++)
+						noff = (noff << 8) + (unsigned char)back_buff[n + 3];
+					printf("Received ACK for packet with offset %u\n", noff);
+					windowAck(&W, noff);
+				}
+				else if (strncmp(back_buff, "RFS", 3) == 0) {
+					uint32_t noff = 0;
+					for (int n = 0; n < 4; n++)
+						noff = (noff << 8) + (unsigned char)back_buff[n + 3];
+					printf("Received RFS for packet with offset %u\n", noff);
+					if(windowAddTry(&W, noff)) {
+						buffer2[0] = 'D';
+						buffer2[1] = 'A';
+						buffer2[2] = 'T';
+						buffer2[3] = 'A';
+						// offset
+						vector<unsigned char> offset_bytes = intToBytes(noff);
+						for (int i = 0; i < 4; i++) {
+							buffer2[i + 4] = offset_bytes[i];
+						}
+						// data
+						for (int i = 0; i < ((4096 - 12 < file_bytes.size() - noff) ? (4096 - 12) : (file_bytes.size() - noff)); i++) {
+							buffer2[i + 8] = file_bytes[i + noff];
+						}
+						if (!sendData(buffer2)) {
+							cout << "Error sending DATA packet" << endl;
+							return 0;
+						}
+					}
+					else {
+						printf("8 times received RFS for %u, ending...\n", noff);
+						exit(1);
+					}
 				}
 			}
-		} while (strncmp(backbuffer, "OK", 2) != 0 && tries != 8);
-		if (tries == 8) {
-			cout << "error while sending file" << endl;
-			exit(1);
 		}
-		offset += 4096 - 12;
-		ZeroMemory(buffer2, sizeof(buffer2));
-		std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
 	}
 
 	// end file transmit
@@ -256,7 +379,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		cout << "Error sending STOP packet" << endl;
 		return 0;
 	}
-
 	// close socket
 	system("pause");
 }
