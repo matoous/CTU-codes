@@ -2,7 +2,7 @@
 
 Homeworks and codes for CTU
 
-(C) Copyright 2017 - 2017 by Matous Dzivjak
+(C) Copyright 2016 - 2017 by Matous Dzivjak
 
 e-mail:   dzivjmat@fel.cvut.cz
 
