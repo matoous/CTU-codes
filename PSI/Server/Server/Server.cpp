@@ -93,7 +93,17 @@ int _tmain(int argc, _TCHAR* argv[])
 				if (fails_in_row == 8) {
 					cout << "transition failed" << endl;
 				}
-				sendto(socketS, "BAD_____________", 16, 0, (sockaddr*)&from, fromlen);
+				if (strncmp(buffer, "DATA", 4) == 0) {
+					char* bb = new char[16];
+					bb[0] = 'R';
+					bb[1] = 'F';
+					bb[2] = 'S';
+					for (int i = 0; i < 4; i++)
+						bb[i + 3] = buffer[i + 4];
+				}
+				else {
+					sendto(socketS, "BAD_____________", 16, 0, (sockaddr*)&from, fromlen);
+				}
 				continue;
 			}
 			else {
@@ -136,21 +146,39 @@ int _tmain(int argc, _TCHAR* argv[])
 							incomming_bytes[i + offset] = buffer[i + 8];
 						}
 					}
-
 					// TESTING
-					int opt = rand() & 1;
-					if (opt) {
-						vector<unsigned char> numb = intToBytes((rand() % 2000) * 10);
-						char re[16] = "OKSS___________";
-						for (int i = 0; i < 4; i++) {
-							re[i + 4] = numb[i];
-						}
-						re_message = re;
+					int rnd = rand() % 100;
+					if (rnd < 20) {
+						vector<unsigned char> offbytes = intToBytes(offset);
+						re_message = new char[16];
+						re_message[0] = 'R';
+						re_message[1] = 'F';
+						re_message[2] = 'S';
+						for (int i = 0; i < 4; i++)
+							re_message[i + 3] = offbytes[i];
+						cout << "sending RFS for " << offset << endl;
 					}
 					else {
-						re_message = "OK______________";
+						vector<unsigned char> offbytes = intToBytes(offset);
+						re_message = new char[16];
+						re_message[0] = 'A';
+						re_message[1] = 'C';
+						re_message[2] = 'K';
+						for (int i = 0; i < 4; i++)
+							re_message[i + 3] = offbytes[i];
+						cout << "sending ACK for " << offset << endl;
 					}
 					// END TESTING
+					/*
+					vector<unsigned char> offbytes = intToBytes(offset);
+					re_message = new char[16];
+					re_message[0] = 'A';
+					re_message[1] = 'C';
+					re_message[2] = 'K';
+					for (int i = 0; i < 4; i++)
+					re_message[i + 3] = offbytes[i];
+					cout << "sending ACK for " << offset << endl;
+					*/
 				}
 				else if (strncmp(buffer, "HASH", 4) == 0) {
 					printf("Received HASH packet\n");
