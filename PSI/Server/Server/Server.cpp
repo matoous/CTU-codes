@@ -1,10 +1,11 @@
 /*******************************************************************
-  PSI semestral project by Matous Dzivjak
-  (C) Copyright 2017 - 2017 by Matous Dzivjak
-      e-mail:   dzivjmat@fel.cvut.cz
-      license:  MIT
-      Feel free to copy as long as you wont use it for the homework
- *******************************************************************/
+PSI semestral project by Matous Dzivjak
+(C) Copyright 2017 - 2017 by Matous Dzivjak
+e-mail:   dzivjmat@fel.cvut.cz
+license:  MIT
+Feel free to copy as long as you wont use it for the homework
+*******************************************************************/
+
 
 #include "stdafx.h"
 #include <winsock2.h>
@@ -20,12 +21,15 @@
 #include <cstdlib>
 #include "md5.h"
 
+#pragma comment(lib, "ws2_32.lib")
+#pragma warning(disable: 4996)
+
 /* CRC-32C (iSCSI) polynomial in reversed bit order. */
 #define POLY 0x82f63b78
+// max fails
+#define MAX_FAILS_IN_ROW 10
 
-/* CRC-32 (Ethernet, ZIP, etc.) polynomial in reversed bit order. */
-/* #define POLY 0xedb88320 */
-
+// crc function
 uint32_t crc32c(uint32_t crc, const char *buf, size_t len)
 {
 	int k;
@@ -39,11 +43,9 @@ uint32_t crc32c(uint32_t crc, const char *buf, size_t len)
 	return ~crc;
 }
 
-#pragma comment(lib, "ws2_32.lib")
-#pragma warning(disable: 4996)
-
 using namespace std;
 
+// init socket
 void InitWinsock(){
 	WSADATA wsaData;
 	WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -63,6 +65,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	// SETUP, do not tuch!
 	SOCKET socketS;
 
+	// init
 	InitWinsock();
 	struct sockaddr_in local;
 	struct sockaddr_in from;
@@ -88,6 +91,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	while (1)
 	{
 		ZeroMemory(buffer, sizeof(buffer));
+		// wait for receive
 		if (recvfrom(socketS, buffer, sizeof(buffer), 0, (sockaddr*)&from, &fromlen) != SOCKET_ERROR)
 		{
 			// Check CRC
@@ -96,12 +100,13 @@ int _tmain(int argc, _TCHAR* argv[])
 				check_crc = (check_crc << 8) + (unsigned char)buffer[n];
 			uint32_t crc = 0;
 			crc = crc32c(crc, buffer, 4096 - 4);
+			
+			// crc bad
 			if (check_crc != crc) {
 				fails_in_row++;
-				if (fails_in_row == 8) {
+				if (fails_in_row == MAX_FAILS_IN_ROW) // if failed too many times
 					cout << "transition failed" << endl;
-				}
-				if (strncmp(buffer, "DATA", 4) == 0) {
+				if (strncmp(buffer, "DATA", 4) == 0) { // if data packet and bad crc, send REFUSE packet with DATA OFFSET
 					char* bb = new char[16];
 					bb[0] = 'R';
 					bb[1] = 'F';
@@ -109,14 +114,13 @@ int _tmain(int argc, _TCHAR* argv[])
 					for (int i = 0; i < 4; i++)
 						bb[i + 3] = buffer[i + 4];
 				}
-				else {
+				else
 					sendto(socketS, "BAD_____________", 16, 0, (sockaddr*)&from, fromlen);
-				}
 				continue;
 			}
 			else {
 				fails_in_row = 0;
-				if (strncmp(buffer, "NAME", 4) == 0) {
+				if (strncmp(buffer, "NAME", 4) == 0) { // NAME PACKET
 					printf("Received NAME packet\n");
 					int l = 0;
 					for (int i = 5; i < 1000; i++) {
@@ -125,7 +129,7 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 					re_message = "OK______________";
 				}
-				else if (strncmp(buffer, "SIZE", 4) == 0) {
+				else if (strncmp(buffer, "SIZE", 4) == 0) { // SIZE PACKET
 					printf("Received SIZE packet\n");
 					file_size = 0;
 					int i = 5;
@@ -136,48 +140,21 @@ int _tmain(int argc, _TCHAR* argv[])
 					}
 					re_message = "OK______________";
 				}
-				else if (strncmp(buffer, "START", 5) == 0) {
+				else if (strncmp(buffer, "START", 5) == 0) { // START PACKET
 					printf("Received START packet\n");
 					incomming_bytes = (char*)malloc(file_size * sizeof(char));
 				}
-				else if (strncmp(buffer, "DATA", 4) == 0) {
+				else if (strncmp(buffer, "DATA", 4) == 0) { // DATA PACKET
 					uint32_t offset = 0;
 					for (int n = 0; n < 4; n++)
 						offset = (offset << 8) + (unsigned char)buffer[n + 4];
-					if (offset + 4096 > file_size) {
-						for (int i = 0; i < file_size - offset; i++) {
+					if (offset + 4096 > file_size)
+						for (int i = 0; i < file_size - offset; i++)
 							incomming_bytes[i + offset] = buffer[i + 8];
-						}
-					}
-					else {
-						for (int i = 0; i < 4096 - 12; i++) {
+					else
+						for (int i = 0; i < 4096 - 12; i++)
 							incomming_bytes[i + offset] = buffer[i + 8];
-						}
-					}
-					// TESTING
-					int rnd = rand() % 100;
-					if (rnd < 20) {
-						vector<unsigned char> offbytes = intToBytes(offset);
-						re_message = new char[16];
-						re_message[0] = 'R';
-						re_message[1] = 'F';
-						re_message[2] = 'S';
-						for (int i = 0; i < 4; i++)
-							re_message[i + 3] = offbytes[i];
-						cout << "sending RFS for " << offset << endl;
-					}
-					else {
-						vector<unsigned char> offbytes = intToBytes(offset);
-						re_message = new char[16];
-						re_message[0] = 'A';
-						re_message[1] = 'C';
-						re_message[2] = 'K';
-						for (int i = 0; i < 4; i++)
-							re_message[i + 3] = offbytes[i];
-						cout << "sending ACK for " << offset << endl;
-					}
-					// END TESTING
-					/*
+				    // return ACK for given data on given offset
 					vector<unsigned char> offbytes = intToBytes(offset);
 					re_message = new char[16];
 					re_message[0] = 'A';
@@ -186,9 +163,8 @@ int _tmain(int argc, _TCHAR* argv[])
 					for (int i = 0; i < 4; i++)
 					re_message[i + 3] = offbytes[i];
 					cout << "sending ACK for " << offset << endl;
-					*/
 				}
-				else if (strncmp(buffer, "HASH", 4) == 0) {
+				else if (strncmp(buffer, "HASH", 4) == 0) { // HASH PACKET
 					printf("Received HASH packet\n");
 					int l = 0;
 					for (int i = 5; i < 128+5; i++) {
@@ -197,9 +173,10 @@ int _tmain(int argc, _TCHAR* argv[])
 					}				
 					re_message = "OK______________";
 				}
-				else if (strncmp(buffer, "STOP", 4) == 0) {
-					printf("Received STOP packet.\n");
-					printf("Writing file.\n");
+				else if (strncmp(buffer, "STOP", 4) == 0) { // STOP PACKET
+					printf("Received STOP packet.\nWriting file.\n");
+
+					// write file
 					ofstream outfile(file_name, ofstream::binary);
 					outfile.write(incomming_bytes, file_size);
 					free(incomming_bytes);
@@ -211,11 +188,12 @@ int _tmain(int argc, _TCHAR* argv[])
 					t.seekg(0, ios::end);
 					str2.reserve(t.tellg());
 					t.seekg(0, ios::beg);
-
 					str2.assign((istreambuf_iterator<char>(t)),
 						istreambuf_iterator<char>());
 					string hashed = md5(str2);
 					string orig_hash(file_hash);
+
+					// check file HASH
 					if (hashed.compare(orig_hash) == 0) {
 						cout << "file ok" << endl;
 						re_message = "OK______________";
@@ -225,11 +203,12 @@ int _tmain(int argc, _TCHAR* argv[])
 						re_message = "BF______________";
 					}
 				}
+				// send response
 				sendto(socketS, re_message, 16, 0, (sockaddr*)&from, fromlen);
 			}
 		}
 	}
+	// close socket
 	closesocket(socketS);
 	return 0;
 }
-
