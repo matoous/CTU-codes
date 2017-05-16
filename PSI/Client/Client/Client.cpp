@@ -359,9 +359,12 @@ int _tmain(int argc, _TCHAR* argv[])
 			if (rv == SOCKET_ERROR) // select error
 				printf("Select error\n");
 			else if (rv == 0){ // Timeout, resend all data that were not ACK in specified time window
+				chrono::time_point<chrono::system_clock> now = chrono::system_clock::now();
+				chrono::duration<double> elapsed_second;
 				int idx = W.front;
 				for (int u = 0; u < W.elements; u++) {
-					if (!W.window[idx].ack) {
+					elapsed_second = now - W.window[idx].time;
+					if (elapsed_second.count() > 1) {
 						W.window[idx].attempts++; // add try
 						// setup data packet
 						buffer2[0] = 'D';
