@@ -364,8 +364,9 @@ int _tmain(int argc, _TCHAR* argv[])
 				int idx = W.front;
 				for (int u = 0; u < W.elements; u++) {
 					elapsed_second = now - W.window[idx].time;
-					if (elapsed_second.count() > 1) {
+					if (elapsed_second.count() > 1) { // check if one second passed
 						W.window[idx].attempts++; // add try
+						W.window[idx].time = now; // set tu current time
 						// setup data packet
 						buffer2[0] = 'D';
 						buffer2[1] = 'A';
