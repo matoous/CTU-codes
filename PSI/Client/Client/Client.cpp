@@ -66,6 +66,7 @@ bool windowAddTry(window_t* W, uint32_t noff) {
 	for (int u = 0; u < (*W).elements; u++) {
 		if ((*W).window[idx].data_offset == noff) {
 			(*W).window[idx].attempts++;
+			(*W).window[idx].time = chrono::system_clock::now();
 			if ((*W).window[idx].attempts == MAX_RESEND_ATTEMPTS)
 				return false;
 		}
@@ -365,22 +366,25 @@ int _tmain(int argc, _TCHAR* argv[])
 				for (int u = 0; u < W.elements; u++) {
 					elapsed_second = now - W.window[idx].time;
 					if (elapsed_second.count() > 1) { // check if one second passed
-						W.window[idx].attempts++; // add try
-						W.window[idx].time = now; // set tu current time
-						// setup data packet
-						buffer2[0] = 'D';
-						buffer2[1] = 'A';
-						buffer2[2] = 'T';
-						buffer2[3] = 'A';
-						// offset
-						vector<unsigned char> offset_bytes = intToBytes(W.window[idx].data_offset);
-						for (int i = 0; i < 4; i++)
-							buffer2[i + 4] = offset_bytes[i];
-						for (int i = 0; i < ((4096 - 12 < file_bytes.size() - W.window[idx].data_offset) ? (4096 - 12) : (file_bytes.size() - W.window[idx].data_offset)); i++)
-							buffer2[i + 8] = file_bytes[i + W.window[idx].data_offset];
-						if (!sendData(buffer2)) {
-							cout << "Error sending DATA packet" << endl;
-							return 0;
+						if(windowAddTry(&W, W.window[idx].offset){
+						    // setup data packet
+						    buffer2[0] = 'D';
+						    buffer2[1] = 'A';
+						    buffer2[2] = 'T';
+						    buffer2[3] = 'A';
+						    // offset
+						    vector<unsigned char> offset_bytes = intToBytes(W.window[idx].data_offset);
+						    for (int i = 0; i < 4; i++)
+							    buffer2[i + 4] = offset_bytes[i];
+						    for (int i = 0; i < ((4096 - 12 < file_bytes.size() - W.window[idx].data_offset) ? (4096 - 12) : (file_bytes.size() - W.window[idx].data_offset)); i++)
+							    buffer2[i + 8] = file_bytes[i + W.window[idx].data_offset];
+						    if (!sendData(buffer2)) {
+							    cout << "Error sending DATA packet" << endl;
+							    return 0;
+						    }
+						} else{
+							printf("packet failed too many times\n");
+							exit(1);
 						}
 					}
 					idx++;
