@@ -345,6 +345,11 @@ std::string MD5::hexdigest() const
 	return std::string(buf);
 }
 
+// return digest as 16 chars
+uint8_t* MD5::digested() {
+	return digest;
+}
+
 //////////////////////////////
 
 std::ostream& operator<<(std::ostream& out, MD5 md5)

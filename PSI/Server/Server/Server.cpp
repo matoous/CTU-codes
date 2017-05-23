@@ -20,45 +20,16 @@ Feel free to copy as long as you wont use it for the homework
 #include <Windows.h>
 #include <cstdlib>
 #include "md5.h"
+#include "rsa.h"
+#include "utils.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma warning(disable: 4996)
 
-/* CRC-32C (iSCSI) polynomial in reversed bit order. */
-#define POLY 0x82f63b78
 // max fails
 #define MAX_FAILS_IN_ROW 10
 
-// crc function
-uint32_t crc32c(uint32_t crc, const char *buf, size_t len)
-{
-	int k;
-
-	crc = ~crc;
-	while (len--) {
-		crc ^= *buf++;
-		for (k = 0; k < 8; k++)
-			crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
-	}
-	return ~crc;
-}
-
 using namespace std;
-
-// init socket
-void InitWinsock(){
-	WSADATA wsaData;
-	WSAStartup(MAKEWORD(2, 2), &wsaData);
-}
-
-/* convert int to bytes */
-vector<unsigned char> intToBytes(uint32_t paramInt)
-{
-	vector<unsigned char> arrayOfByte(4);
-	for (int i = 0; i < 4; i++)
-		arrayOfByte[3 - i] = (paramInt >> (i * 8));
-	return arrayOfByte;
-}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
@@ -76,15 +47,19 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	socketS = socket(AF_INET, SOCK_DGRAM, 0);
 	bind(socketS, (sockaddr*)&local, sizeof(local));
-	printf("Listening on port 4000\n");
+	printf("INFO Listening on port 4000\n");
+	cout << "Enter the handshake number: ";
+	bignum_t hsn;
+	cin >> hsn;
 
 	// my vars
+	Rsa rsa(743, 547);   // Maybe read as params
 	uint32_t file_size;
 	char file_name[64];
 	char* incomming_bytes;
 	char buffer[4096];
+	char re_message[32];
 	char file_hash[128];
-	char* re_message;
 	int fails_in_row = 0;
 
 	// loop
@@ -105,7 +80,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			if (check_crc != crc) {
 				fails_in_row++;
 				if (fails_in_row == MAX_FAILS_IN_ROW) // if failed too many times
-					cout << "transition failed" << endl;
+					cerr << "ERROR transition failed" << endl;
 				if (strncmp(buffer, "DATA", 4) == 0) { // if data packet and bad crc, send REFUSE packet with DATA OFFSET
 					char* bb = new char[16];
 					bb[0] = 'R';
@@ -115,96 +90,152 @@ int _tmain(int argc, _TCHAR* argv[])
 						bb[i + 3] = buffer[i + 4];
 				}
 				else
-					sendto(socketS, "BAD_____________", 16, 0, (sockaddr*)&from, fromlen);
+					sendto(socketS, "BAD_____________________________", 32, 0, (sockaddr*)&from, fromlen);
 				continue;
 			}
 			else {
-				fails_in_row = 0;
-				if (strncmp(buffer, "NAME", 4) == 0) { // NAME PACKET
-					printf("Received NAME packet\n");
-					int l = 0;
-					for (int i = 5; i < 1000; i++) {
-						file_name[l++] = buffer[i];
-						if (buffer[i] == '\0') break;
+				// check RSA
+				bool rsa_ok = true;
+				if (rsa.set) {
+					MD5 md5(std::string(&buffer[0], &buffer[4096 - 4 - 128]));
+					uint8_t* hashes = md5.digested();
+					for (int i = 0; i < 16; i++) {
+						bignum_t curr = 0;
+						for (int u = 0; u < 8; u++)
+							curr = (curr << 8) + (unsigned char)buffer[4096 - 4 - 128 + (i * 8) + u];
+						if (hashes[i] != rsa.decrypt(curr)) {
+							rsa_ok = false;
+							cerr << "ERROR authentication error" << endl;
+							break;
+						}
 					}
-					re_message = "OK______________";
 				}
-				else if (strncmp(buffer, "SIZE", 4) == 0) { // SIZE PACKET
-					printf("Received SIZE packet\n");
-					file_size = 0;
-					int i = 5;
-					while (1) {
-						if (buffer[i] == '\0') break;
-						file_size *= 10;
-						file_size += buffer[i++] - '0';
-					}
-					re_message = "OK______________";
-				}
-				else if (strncmp(buffer, "START", 5) == 0) { // START PACKET
-					printf("Received START packet\n");
-					incomming_bytes = (char*)malloc(file_size * sizeof(char));
-				}
-				else if (strncmp(buffer, "DATA", 4) == 0) { // DATA PACKET
-					uint32_t offset = 0;
-					for (int n = 0; n < 4; n++)
-						offset = (offset << 8) + (unsigned char)buffer[n + 4];
-					if (offset + 4096 > file_size)
-						for (int i = 0; i < file_size - offset; i++)
-							incomming_bytes[i + offset] = buffer[i + 8];
-					else
-						for (int i = 0; i < 4096 - 12; i++)
-							incomming_bytes[i + offset] = buffer[i + 8];
-				    // return ACK for given data on given offset
-					vector<unsigned char> offbytes = intToBytes(offset);
-					re_message = new char[16];
-					re_message[0] = 'A';
-					re_message[1] = 'C';
-					re_message[2] = 'K';
-					for (int i = 0; i < 4; i++)
-					re_message[i + 3] = offbytes[i];
-					cout << "sending ACK for " << offset << endl;
-				}
-				else if (strncmp(buffer, "HASH", 4) == 0) { // HASH PACKET
-					printf("Received HASH packet\n");
-					int l = 0;
-					for (int i = 5; i < 128+5; i++) {
-						file_hash[l++] = buffer[i];
-						if (buffer[i] == '\0') break;
-					}				
-					re_message = "OK______________";
-				}
-				else if (strncmp(buffer, "STOP", 4) == 0) { // STOP PACKET
-					printf("Received STOP packet.\nWriting file.\n");
+				if (rsa_ok) {
 
-					// write file
-					ofstream outfile(file_name, ofstream::binary);
-					outfile.write(incomming_bytes, file_size);
-					free(incomming_bytes);
-					outfile.close();
-
-					// file md5
-					ifstream t(file_name);
-					string str2;
-					t.seekg(0, ios::end);
-					str2.reserve(t.tellg());
-					t.seekg(0, ios::beg);
-					str2.assign((istreambuf_iterator<char>(t)),
-						istreambuf_iterator<char>());
-					string hashed = md5(str2);
-					string orig_hash(file_hash);
-
-					// check file HASH
-					if (hashed.compare(orig_hash) == 0) {
-						cout << "file ok" << endl;
-						re_message = "OK______________";
+					fails_in_row = 0;
+					if (strncmp(buffer, "NAME", 4) == 0) { // NAME PACKET
+						cout << "INFO Received NAME packet" << endl;
+						int l = 0;
+						for (int i = 5; i < 1000; i++) {
+							file_name[l++] = buffer[i];
+							if (buffer[i] == '\0') break;
+						}
+						sprintf(re_message, "OK____________________________");
 					}
-					else {
-						cout << "file bad" << endl;
-						re_message = "BF______________";
+					else if (strncmp(buffer, "KEYS", 4) == 0) { // KEYS PACKET
+						cout << "INFO Received KEYS packet" << endl;
+						bignum_t n = 0;
+						for (int i = 0; i < 8; i++)
+							n = (n << 8) + (unsigned char)buffer[i + 5];
+						bignum_t e = 0;
+						for (int i = 0; i < 8; i++)
+							e = (e << 8) + (unsigned char)buffer[i + 13];
+						rsa.set_public(n, e);
+						sprintf(re_message, "OKEY=");
+						vector<unsigned char> nbytes = bigintToBytes(rsa.getN());
+						for (int i = 0; i < 8; i++)
+							re_message[i + 5] = nbytes[i];
+						vector<unsigned char> ebytes = bigintToBytes(rsa.getE());
+						for (int i = 0; i < 8; i++)
+							re_message[i + 13] = ebytes[i];
 					}
+					else if (strncmp(buffer, "WELC", 4) == 0) { // KEYS PACKET
+						cout << "INFO Received WELC packet" << endl;
+						bignum_t msg = 0;
+						for (int i = 0; i < 8; i++)
+							msg = (msg << 8) + (unsigned char)buffer[i + 5];
+						if (rsa.decrypt(msg) == hsn) {
+							cout << "INFO the welcome message from client matches server side welcome message, replying." << endl;
+							sprintf(re_message, "WELC=");
+							vector<unsigned char> nbytes = bigintToBytes(rsa.encrypt(hsn));
+							for (int i = 0; i < 8; i++)
+								re_message[i + 5] = nbytes[i];
+						}
+						else {
+							cerr << "ERROR received bad welcome message, received " << rsa.decrypt(msg) << " encrypted as " << msg << " should be " << hsn << endl;
+							sprintf(re_message, "NWELC__________________________");
+						}
+					}
+					else if (strncmp(buffer, "SIZE", 4) == 0) { // SIZE PACKET
+						cout << "INFO Received SIZE packet" << endl;
+						file_size = 0;
+						int i = 5;
+						while (1) {
+							if (buffer[i] == '\0') break;
+							file_size *= 10;
+							file_size += buffer[i++] - '0';
+						}
+						cout << "FILE size " << file_size << endl;
+						sprintf(re_message, "OK____________________________");
+					}
+					else if (strncmp(buffer, "START", 5) == 0) { // START PACKET
+						cout << "INFO Received START packet" << endl;
+						incomming_bytes = (char*)malloc(file_size * sizeof(char));
+					}
+					else if (strncmp(buffer, "DATA", 4) == 0) { // DATA PACKET
+						uint32_t offset = 0;
+						for (int n = 0; n < 4; n++)
+							offset = (offset << 8) + (unsigned char)buffer[n + 4];
+						if (offset + 4096 - 128 - 12 > file_size)
+							for (int i = 0; i < file_size - offset; i++)
+								incomming_bytes[i + offset] = buffer[i + 8];
+						else
+							for (int i = 0; i < 4096 - 12 - 128; i++)
+								incomming_bytes[i + offset] = buffer[i + 8];
+						// return ACK for given data on given offset
+						vector<unsigned char> offbytes = intToBytes(offset);
+						re_message[0] = 'A';
+						re_message[1] = 'C';
+						re_message[2] = 'K';
+						for (int i = 0; i < 4; i++)
+							re_message[i + 3] = offbytes[i];
+						cout << "INFO sending ACK for " << offset << endl;
+					}
+					else if (strncmp(buffer, "HASH", 4) == 0) { // HASH PACKET
+						cout << "INFO received HASH packet ";
+						int l = 0;
+						for (int i = 5; i < 128 + 5; i++) {
+							file_hash[l++] = buffer[i];
+							if (buffer[i] == '\0') break;
+						}
+						cout << file_hash << endl;
+						sprintf(re_message, "OK____________________________");
+					}
+					else if (strncmp(buffer, "STOP", 4) == 0) { // STOP PACKET
+						cout << "INFO Received STOP packet. Writing file." << endl;
+
+						//cout << string(incomming_bytes) << endl;
+
+						// write file
+						ofstream outfile(file_name, ofstream::binary);
+						outfile.write(incomming_bytes, file_size);
+						free(incomming_bytes);
+						outfile.close();
+
+						// file md5
+						ifstream t(file_name);
+						string str2;
+						t.seekg(0, ios::end);
+						str2.reserve(t.tellg());
+						t.seekg(0, ios::beg);
+						str2.assign((istreambuf_iterator<char>(t)),
+							istreambuf_iterator<char>());
+						string hashed = md5(str2);
+						string orig_hash(file_hash);
+
+						// check file HASH
+						if (hashed.compare(orig_hash) == 0) {
+							cout << "INFO file is ok, saved" << endl;
+							sprintf(re_message, "OK____________________________");
+						}
+						else {
+							cerr << "ERROR file hash does not match the original one." << endl;
+							sprintf(re_message, "BF____________________________");
+						}
+					}
+					// send response
+					sendto(socketS, re_message, 32, 0, (sockaddr*)&from, fromlen);
 				}
-				// send response
-				sendto(socketS, re_message, 16, 0, (sockaddr*)&from, fromlen);
 			}
 		}
 	}
@@ -212,3 +243,4 @@ int _tmain(int argc, _TCHAR* argv[])
 	closesocket(socketS);
 	return 0;
 }
+

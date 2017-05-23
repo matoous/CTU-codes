@@ -1,8 +1,8 @@
 /*******************************************************************
-PSI semestral project by Matous Dzivjak
-(C) Copyright 2017 - 2017 by Matous Dzivjak
-e-mail:   dzivjmat@fel.cvut.cz
-license:  MIT
+project:         PSI semestral project by Matous Dzivjak
+(C) Copyright:   2017 - 2017 by Matous Dzivjak
+e-mail:          dzivjmat@fel.cvut.cz
+license:         MIT
 Feel free to copy as long as you wont use it for the homework
 *******************************************************************/
 
@@ -19,124 +19,27 @@ Feel free to copy as long as you wont use it for the homework
 #include <thread>
 #include <stdint.h>
 #include "md5.h"
+#include "rsa.h"
+#include "crc.h"
+#include "sliding_window.h"
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma warning(disable: 4996)
 
-/* CRC-32C (iSCSI) polynomial in reversed bit order. */
-#define POLY 0x82f63b78
-// time to wait for packet ACK
 #define SOCKET_READ_TIMEOUT_SEC 1
-// sliding window size
 #define SLIDING_WINDOW_SIZE 4
-// max resend attempts
-#define MAX_RESEND_ATTEMPTS 5
+#define DEFAULT_LEN 64
+#define PACKET_SIZE 4096
 
 /* NAMESPACE */
 using namespace std;
-
-// Frame struct, holds info about data offset, send attempts, time of first send (I do not use this one), and if the data were succesfuly received
-typedef struct frame_t {
-	uint32_t data_offset;
-	chrono::time_point<chrono::system_clock> time;
-	bool ack;
-	unsigned char attempts;
-} frame_t;
-
-// Window struct, circular queue with bonuses
-typedef struct window_t {
-	uint16_t size;
-	vector<frame_t> window;
-	uint16_t front, end, elements;
-} window_t;
-
-// Init sliding window with given size
-window_t initWindow(int s) {
-	window_t w;
-	w.size = s;
-	w.window.resize(w.size);
-	w.front = w.elements = 0;
-	w.end = -1;
-	return w;
-}
-
-// Add try to frame
-bool windowAddTry(window_t* W, uint32_t noff) {
-	int idx = (*W).front;
-	for (int u = 0; u < (*W).elements; u++) {
-		if ((*W).window[idx].data_offset == noff) {
-			(*W).window[idx].attempts++;
-			(*W).window[idx].time = chrono::system_clock::now();
-			if ((*W).window[idx].attempts == MAX_RESEND_ATTEMPTS)
-				return false;
-		}
-	}
-	return true;
-}
-
-// Is window full?
-bool windowFull(window_t* W) {
-	return (*W).elements == (*W).size;
-}
-
-// Is window empty?
-bool windowEmpty(window_t* W) {
-	return (*W).elements == 0;
-}
-
-// Add frame to window
-bool windowAdd(window_t* W, frame_t F) {
-	if (windowFull(W))
-		return false;
-	else {
-		(*W).end++;
-		if ((*W).end == (*W).size)
-			(*W).end = 0;
-		(*W).window[(*W).end] = F;
-		(*W).elements++;
-	}
-}
-
-// Acknowledge given data and slide window accordingly
-void windowAck(window_t* W, uint32_t off) {
-	int idx = (*W).front;
-	for (int u = 0; u < (*W).elements; u++) {
-		if ((*W).window[idx].data_offset == off) {
-			(*W).window[idx].ack = true;
-			printf("Successfuly ACK frame with offset %u index %d in the window\n", off, idx);
-			if (idx == (*W).front) {
-				while ((*W).elements != 0 && (*W).window[(*W).front].ack) {
-					(*W).front++;
-					if ((*W).front == (*W).size)
-						(*W).front = 0;
-					(*W).elements--;
-				}
-			}
-		}
-		idx++;
-		if (idx == (*W).size)
-			idx = 0;
-	}
-}
-
-// CRC function
-uint32_t crc32c(uint32_t crc, const char *buf, size_t len)
-{
-	int k;
-
-	crc = ~crc;
-	while (len--) {
-		crc ^= *buf++;
-		for (k = 0; k < 8; k++)
-			crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
-	}
-	return ~crc;
-}
 
 /* Global variables */
 SOCKET socketC;
 struct sockaddr_in serverInfo;
 int len;
+Rsa rsa(911, 571);
+bignum_t shn;
 
 /* Socket init */
 void InitWinsock()
@@ -172,43 +75,72 @@ vector<unsigned char> intToBytes(uint32_t paramInt)
 	return arrayOfByte;
 }
 
+/* convert 64bit int to bytes */
+vector<unsigned char> bigintToBytes(bignum_t paramInt)
+{
+	vector<unsigned char> arrayOfBytes(8);
+	for (int i = 0; i < 8; i++)
+		arrayOfBytes[7 - i] = (paramInt >> (i * 8));
+	return arrayOfBytes;
+}
+
 bool sendData(const char* s) {
 	// init variables
-	char buffer[4096];
+	char buffer[PACKET_SIZE];
 	ZeroMemory(buffer, sizeof(buffer));
 
 	// print string to buffer
-	for (int i = 0; i < 4092; i++)
+	for (int i = 0; i < PACKET_SIZE - 4 - 128; i++)
 		buffer[i] = s[i];
+
+	// hash and encrypt
+	MD5 md5(std::string(&buffer[0], &buffer[PACKET_SIZE - 4 - 128]));
+	uint8_t* hashes = md5.digested();
+	for (int i = 0; i < 16; i++) {
+	    vector<unsigned char> bytes = bigintToBytes(rsa.encrypt((bignum_t)hashes[i]));
+		for (int u = 0; u < 8; u++) {
+			buffer[PACKET_SIZE - 4 - 128 + (i * 8) + u] = bytes[u];
+		}
+	}
 
 	// compute crc
 	uint32_t crc = 0;
-	crc = crc32c(crc, buffer, 4092);
+	crc = crc32c(crc, buffer, PACKET_SIZE-4);
 	vector<unsigned char> crc_bytes = intToBytes(crc);
-	for (int i = 4092; i < 4096; i++)
-		buffer[i] = crc_bytes[i - 4092];
+	for (int i = PACKET_SIZE-4; i < PACKET_SIZE; i++)
+		buffer[i] = crc_bytes[i - (PACKET_SIZE - 4)];
 
 	return sendto(socketC, buffer, sizeof(buffer), 0, (sockaddr*)&serverInfo, len) != SOCKET_ERROR;
 }
-
 
 /* send string */
 bool sendString(const char* s) {
 	// init variables
 	int tries = 0;
-	char back_buff[16];
-	char buffer[4096];
+	char back_buff[DEFAULT_LEN];
+	char buffer[PACKET_SIZE];
 	ZeroMemory(buffer, sizeof(buffer));
 
 	// print string to buffer
-	sprintf(buffer, s);
+	for (int i = 0; i < DEFAULT_LEN; i++)
+		buffer[i] = s[i];
+
+	// hash and encrypt
+	MD5 md5(std::string(&buffer[0], &buffer[PACKET_SIZE - 4 - 128]));
+	uint8_t* hashes = md5.digested();
+	for (int i = 0; i < 16; i++) {
+		vector<unsigned char> bytes = bigintToBytes(rsa.encrypt((bignum_t)hashes[i]));
+		for (int u = 0; u < 8; u++) {
+			buffer[PACKET_SIZE - 4 - 128 + (i * 8) + u] = bytes[u];
+		}
+	}
 	
 	// compute crc
 	uint32_t crc = 0;
-	crc = crc32c(crc, buffer, 4092);
+	crc = crc32c(crc, buffer, PACKET_SIZE-4);
 	vector<unsigned char> crc_bytes = intToBytes(crc);
-	for (int i = 4092; i < 4096; i++)
-		buffer[i] = crc_bytes[i-4092];
+	for (int i = PACKET_SIZE-4; i < PACKET_SIZE; i++)
+		buffer[i] = crc_bytes[i-(PACKET_SIZE-4)];
 
 	// set select
 	fd_set set;
@@ -229,8 +161,36 @@ bool sendString(const char* s) {
 			else if (rv == 0) // timeout
 				continue;
 			else // received in time
-				if (recvfrom(socketC, back_buff, sizeof(back_buff), 0, (sockaddr*)&serverInfo, &len) != SOCKET_ERROR)
+				if (recvfrom(socketC, back_buff, sizeof(back_buff), 0, (sockaddr*)&serverInfo, &len) != SOCKET_ERROR) {
 					printf("Receive response from server: %s after %d tries\n", back_buff, tries);
+					if (strncmp(back_buff, "OKEY", 4) == 0) {
+						bignum_t n = 0;
+						for (int i = 0; i < 8; i++)
+							n = (n << 8) + (unsigned char)back_buff[i + 5];
+						bignum_t e = 0;
+						for (int i = 0; i < 8; i++)
+							e = (e << 8) + (unsigned char)back_buff[i + 13];
+						rsa.set_public(n, e);
+					}
+					else if (strncmp(back_buff, "WELC", 4) == 0) {
+						bignum_t msg = 0;
+						for (int i = 0; i < 8; i++)
+							msg = (msg << 8) + (unsigned char)back_buff[i + 5];
+						if (rsa.decrypt(msg) == shn) {
+							cout << "INFO souccessfuly handshaked with server" << endl;
+							back_buff[0] = 'O';
+							back_buff[1] = 'K';
+						}
+						else {
+							cerr << "ERROR server send wrong handshake code" << endl;
+							return false;
+						}
+					}
+					else if (strncmp(back_buff, "NWELC", 5) == 0) {
+						cerr << "ERROR you enter wrong handshake code" << endl;
+						return false;
+					}
+				}
 		}
 	} while (strncmp(back_buff, "OK", 2) != 0 && tries != MAX_RESEND_ATTEMPTS);
 
@@ -250,7 +210,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	string file = "D:\\in.txt";                                                             // CHANGE THIS
 	string fname = "D:\\out.txt";                                                           // CHANGE THIS
 
-
 	// open socket
 	socketC = socket(AF_INET, SOCK_DGRAM, 0);
 
@@ -267,13 +226,39 @@ int _tmain(int argc, _TCHAR* argv[])
 	// read file bytes
 	vector<char> file_bytes = ReadAllBytes(file);
 
-	char str[120];
+	char str[64];
+
+	// send keys
+	ZeroMemory(str, sizeof(str));
+	sprintf(str, "KEYS=");
+	vector<unsigned char> bytesN = bigintToBytes(rsa.getN());
+	for (int i = 0; i < 8; i++)
+		str[i+5] = bytesN[i];
+	vector<unsigned char> bytesE = bigintToBytes(rsa.getE());
+	for (int i = 0; i < 8; i++)
+		str[i+13] = bytesE[i];
+	if (!sendString(str)) {
+		cerr << "ERROR sending KEYS packet" << endl;
+		return 0;
+	}
+
+	// send handshake
+	cout << "Enter handshake num: ";
+	cin >> shn;
+	sprintf(str, "WELC=");
+	vector<unsigned char> welcome_msg = bigintToBytes(rsa.encrypt(shn));
+	for (int i = 0; i < 8; i++)
+		str[i + 5] = welcome_msg[i];
+	if (!sendString(str)) {
+		cerr << "ERROR sending WELCOM packet with handshake num " << shn << " encrypted as "<< rsa.encrypt(shn) << endl;
+		return 0;
+	}
 
 	// send file name
 	ZeroMemory(str, sizeof(str));
 	sprintf(str, "NAME=%s", fname.c_str());
 	if (!sendString(str)) {
-		cout << "Error sending NAME packet" << endl;
+		cerr << "ERROR sending NAME packet" << endl;
 		return 0;
 	}
 
@@ -282,7 +267,7 @@ int _tmain(int argc, _TCHAR* argv[])
 	sprintf(str, "SIZE=%ld", file_bytes.size());
 	cout << "file size " << file_bytes.size() << endl;
 	if (!sendString(str)) {
-		cout << "Error sending SIZE packet" << endl;
+		cerr << "ERROR sending SIZE packet" << endl;
 		return 0;
 	}
 
@@ -292,9 +277,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	for (int i = 0; i < hashed.size(); i++)
 		str[i + 5] = hashed[i];
 	str[5 + hashed.size()] = '\0';
-	cout << "sanding hash " << str << endl;
+	cout << "INFO sanding hash " << str << endl;
 	if (!sendString(str)) {
-		cout << "Error sending HASH packet" << endl;
+		cerr << "ERROR sending HASH packet" << endl;
 		return 0;
 	}
 
@@ -302,15 +287,15 @@ int _tmain(int argc, _TCHAR* argv[])
 	ZeroMemory(str, sizeof(str));
 	sprintf(str, "START");
 	if (!sendString(str)) {
-		cout << "Error sending START packet" << endl;
+		cerr << "ERROR sending START packet" << endl;
 		return 0;
 	}
 
 	// transmit
 	uint32_t offset = 0;
-	char buffer2[4096];
+	char buffer[PACKET_SIZE];
 	window_t W = initWindow(SLIDING_WINDOW_SIZE);
-	char back_buff[16];
+	char back_buff[32];
 
 	// set select
 	fd_set set;
@@ -321,21 +306,19 @@ int _tmain(int argc, _TCHAR* argv[])
 	while (offset < file_bytes.size() || !windowEmpty(&W)) {
 		if (!windowFull(&W) && offset < file_bytes.size()) {
 			// create data packet
-			buffer2[0] = 'D';
-			buffer2[1] = 'A';
-			buffer2[2] = 'T';
-			buffer2[3] = 'A';
+			buffer[0] = 'D';
+			buffer[1] = 'A';
+			buffer[2] = 'T';
+			buffer[3] = 'A';
 			// offset
 			vector<unsigned char> offset_bytes = intToBytes(offset);
-			for (int i = 0; i < 4; i++) {
-				buffer2[i + 4] = offset_bytes[i];
-			}
+			for (int i = 0; i < 4; i++)
+				buffer[i + 4] = offset_bytes[i];
 			// data
-			for (int i = 0; i < ((4096 - 12 < file_bytes.size() - offset) ? (4096 - 12) : (file_bytes.size() - offset)); i++) {
-				buffer2[i + 8] = file_bytes[i + offset];
-			}
-			if (!sendData(buffer2)) {
-				cout << "Error sending DATA packet" << endl;
+			for (int i = 0; i < ((PACKET_SIZE - 12 - 128 < file_bytes.size() - offset) ? (PACKET_SIZE - 12 - 128) : (file_bytes.size() - offset)); i++)
+				buffer[i + 8] = file_bytes[i + offset];
+			if (!sendData(buffer)) {
+				cerr << "ERROR sending DATA packet" << endl;
 				return 0;
 			}
 
@@ -348,10 +331,10 @@ int _tmain(int argc, _TCHAR* argv[])
 			windowAdd(&W, nf);
 
 			// increment offset
-			offset += 4096 - 12;
+			offset = offset + PACKET_SIZE - 12 - 128;
 
 			// clean buffer
-			ZeroMemory(buffer2, sizeof(buffer2));
+			ZeroMemory(buffer, sizeof(buffer));
 		}
 		else {
 			FD_ZERO(&set); /* clear the set */
@@ -366,25 +349,22 @@ int _tmain(int argc, _TCHAR* argv[])
 				for (int u = 0; u < W.elements; u++) {
 					elapsed_second = now - W.window[idx].time;
 					if (elapsed_second.count() > 1) { // check if one second passed
-						if(windowAddTry(&W, W.window[idx].offset){
-						    // setup data packet
-						    buffer2[0] = 'D';
-						    buffer2[1] = 'A';
-						    buffer2[2] = 'T';
-						    buffer2[3] = 'A';
-						    // offset
-						    vector<unsigned char> offset_bytes = intToBytes(W.window[idx].data_offset);
-						    for (int i = 0; i < 4; i++)
-							    buffer2[i + 4] = offset_bytes[i];
-						    for (int i = 0; i < ((4096 - 12 < file_bytes.size() - W.window[idx].data_offset) ? (4096 - 12) : (file_bytes.size() - W.window[idx].data_offset)); i++)
-							    buffer2[i + 8] = file_bytes[i + W.window[idx].data_offset];
-						    if (!sendData(buffer2)) {
-							    cout << "Error sending DATA packet" << endl;
-							    return 0;
-						    }
-						} else{
-							printf("packet failed too many times\n");
-							exit(1);
+						W.window[idx].attempts++; // add try
+						W.window[idx].time = now; // set tu current time
+						// setup data packet
+						buffer[0] = 'D';
+						buffer[1] = 'A';
+						buffer[2] = 'T';
+						buffer[3] = 'A';
+						// offset
+						vector<unsigned char> offset_bytes = intToBytes(W.window[idx].data_offset);
+						for (int i = 0; i < 4; i++)
+							buffer[i + 4] = offset_bytes[i];
+						for (int i = 0; i < ((4096 - 12 - 128 < file_bytes.size() - W.window[idx].data_offset) ? (4096 - 12 - 128) : (file_bytes.size() - W.window[idx].data_offset)); i++)
+							buffer[i + 8] = file_bytes[i + W.window[idx].data_offset];
+						if (!sendData(buffer)) {
+							cerr << "ERROR sending DATA packet" << endl;
+							return 0;
 						}
 					}
 					idx++;
@@ -405,21 +385,21 @@ int _tmain(int argc, _TCHAR* argv[])
 						uint32_t noff = 0;
 						for (int n = 0; n < 4; n++)
 							noff = (noff << 8) + (unsigned char)back_buff[n + 3];
-						printf("Received RFS for packet with offset %u\n", noff);
+						cout << "Received RFS for packet with offset " << noff << endl;
 						if (windowAddTry(&W, noff)) { // try to send again, fail if already failed few times
-							buffer2[0] = 'D';
-							buffer2[1] = 'A';
-							buffer2[2] = 'T';
-							buffer2[3] = 'A';
+							buffer[0] = 'D';
+							buffer[1] = 'A';
+							buffer[2] = 'T';
+							buffer[3] = 'A';
 							// offset
 							vector<unsigned char> offset_bytes = intToBytes(noff);
 							for (int i = 0; i < 4; i++)
-								buffer2[i + 4] = offset_bytes[i];
+								buffer[i + 4] = offset_bytes[i];
 							// data
-							for (int i = 0; i < ((4096 - 12 < file_bytes.size() - noff) ? (4096 - 12) : (file_bytes.size() - noff)); i++)
-								buffer2[i + 8] = file_bytes[i + noff];
-							if (!sendData(buffer2)) {
-								cout << "Error sending DATA packet" << endl;
+							for (int i = 0; i < ((4096 - 12 - 128 < file_bytes.size() - noff) ? (4096 - 12 - 128) : (file_bytes.size() - noff)); i++)
+								buffer[i + 8] = file_bytes[i + noff];
+							if (!sendData(buffer)) {
+								cerr << "ERROR sending DATA packet" << endl;
 								return 0;
 							}
 						}
@@ -437,7 +417,8 @@ int _tmain(int argc, _TCHAR* argv[])
 	ZeroMemory(str, sizeof(str));
 	sprintf(str, "STOP");
 	if (!sendString(str)) {
-		cout << "Error sending STOP packet" << endl;
+		cerr << "ERROR sending STOP packet" << endl;
+		system("pause");
 		return 0;
 	}
 
