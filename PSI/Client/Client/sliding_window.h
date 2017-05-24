@@ -1,10 +1,10 @@
-//============================================================================
-// Name        : sliding_window.h
-// Author      : Matous Dzivjak
-// Version     : 0.1
-// Copyright   : 2017, Matous Dzivjak
-// Description : Sliding window utility for PSI semestral project
-//============================================================================
+/*******************************************************************
+project:         PSI semestral project by Matous Dzivjak
+(C) Copyright:   2017 - 2017 by Matous Dzivjak
+e-mail:          dzivjmat@fel.cvut.cz
+license:         MIT
+Feel free to copy as long as you wont use it for the homework
+*******************************************************************/
 
 #include <inttypes.h>
 #include <vector>
