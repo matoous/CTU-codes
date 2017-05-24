@@ -28,6 +28,7 @@ Feel free to copy as long as you wont use it for the homework
 
 // max fails
 #define MAX_FAILS_IN_ROW 10
+#define PACKET_DATA_SIZE 3964
 
 using namespace std;
 
@@ -97,12 +98,12 @@ int _tmain(int argc, _TCHAR* argv[])
 				// check RSA
 				bool rsa_ok = true;
 				if (rsa.set) {
-					MD5 md5(std::string(&buffer[0], &buffer[4096 - 4 - 128]));
+					MD5 md5(std::string(&buffer[0], &buffer[PACKET_DATA_SIZE]));
 					uint8_t* hashes = md5.digested();
 					for (int i = 0; i < 16; i++) {
 						bignum_t curr = 0;
 						for (int u = 0; u < 8; u++)
-							curr = (curr << 8) + (unsigned char)buffer[4096 - 4 - 128 + (i * 8) + u];
+							curr = (curr << 8) + (unsigned char)buffer[PACKET_DATA_SIZE + (i * 8) + u];
 						if (hashes[i] != rsa.decrypt(curr)) {
 							rsa_ok = false;
 							cerr << "ERROR authentication error" << endl;
