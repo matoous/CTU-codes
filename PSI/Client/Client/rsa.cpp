@@ -13,6 +13,29 @@ Feel free to copy as long as you wont use it for the homework
 
 using namespace std;
 
+bignum_t gcd(bignum_t a, bignum_t h)
+{
+	bignum_t temp;
+	while (1) {
+		temp = a%h;
+		if (temp == 0)
+			return h;
+		a = h;
+		h = temp;
+	}
+}
+
+bignum_t modpow(bignum_t base, bignum_t exp, bignum_t modulus) {
+	base %= modulus;
+	bignum_t result = 1;
+	while (exp > 0) {
+		if (exp & 1) result = (result * base) % modulus;
+		base = (base * base) % modulus;
+		exp >>= 1;
+	}
+	return result;
+}
+
 bignum_t modulo(bignum_t n, bignum_t p)
 {
 	bignum_t r = n%p;
@@ -27,17 +50,6 @@ bignum_t modInverse(bignum_t n, bignum_t p) {
 		if (modulo(n*x, p) == 1) return x;
 	}
 	return 0;
-}
-
-bignum_t gcd(bignum_t a, bignum_t b)
-{
-	for (;;)
-	{
-		if (a == 0) return b;
-		b %= a;
-		if (b == 0) return a;
-		a %= b;
-	}
 }
 
 bignum_t lcm(bignum_t a, bignum_t b)
