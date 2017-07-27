@@ -21,3 +21,5 @@ Feel free to copy as long as you wont use it for the homework
 <b>KAJ</b> - Klientské aplikace v JavaScriptu <i>(JavaScript)</i>
 
 <b>PSI</b> - Počítačové sítě <i>(Client and Server works with selective-repeat now)</i>
+
+:fire:
