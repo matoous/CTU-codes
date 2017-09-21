@@ -2,13 +2,9 @@
 
 Homeworks and codes for CTU
 
-(C) Copyright 2016 - 2017 by Matous Dzivjak
-
 e-mail:   dzivjmat@fel.cvut.cz
 
-license:  MIT
-
-Feel free to copy as long as you wont use it for the homework
+license:  [Lil license/BSD license combination](https://github.com/matoous/CTU-codes/blob/master/LICENSE.md)
 
 <b>PRP</b> - Procedurální programování
 
