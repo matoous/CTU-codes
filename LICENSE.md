@@ -1,4 +1,4 @@
-## The Mcl License v1
+## The Lil License vM (Lil license/BSD license combination)
 
 Copyright (c) 2017 Matouš Dzivjak <dzivjak@matous.me>
 
