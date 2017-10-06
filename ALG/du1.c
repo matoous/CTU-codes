@@ -44,17 +44,7 @@ int main(){
 
     int max = 0, lower_bound = 1;
     for(int i = 0; i < m; i++) for(int u = 0; u < n; u++){
-            node current = grid[i][u];
-            int ct = current.lefts.TOXIC + current.ups.TOXIC, cm = current.lefts.MINERALS + current.ups.MINERALS;
-            for(int j = MIN(m-i, n-u)-1; j >= lower_bound; j--){
-                int minerals = grid[i+j][u].ups.MINERALS - grid[i+j][u].lefts.MINERALS + grid[i][u+j].lefts.MINERALS - grid[i][u+j].ups.MINERALS + (current.self == 1 ? -1 : 0) + grid[i+j][u+j].ups.MINERALS + grid[i+j][u+j].lefts.MINERALS + (grid[i+j][u+j].self == 1 ? 1 : 0) - cm;
-                int toxic = grid[i+j][u].ups.TOXIC - grid[i+j][u].lefts.TOXIC + grid[i][u+j].lefts.TOXIC - grid[i][u+j].ups.TOXIC + (current.self == 2 ? -1 : 0) + grid[i+j][u+j].ups.TOXIC + grid[i+j][u+j].lefts.TOXIC + (grid[i+j][u+j].self == 2 ? 1 : 0) - ct;
-                if (toxic*2 > minerals) continue;
-                if (minerals > max){
-                    max = minerals;
-                    lower_bound = max/4;
-                }
-            }
+            // do it yourself :*
         }
 
     printf("%d\n", max);
