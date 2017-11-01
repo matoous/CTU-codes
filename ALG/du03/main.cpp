@@ -1,3 +1,4 @@
+// by Matous Dzivjak <dzivjak@matous.me>
 #include <stdio.h>
 #include <vector>
 #include <queue>
@@ -40,7 +41,7 @@ int main(){
 
       while(!Q.empty() && !bad){
         auto current = Q.front(); Q.pop();
-        if(visited[current] == 2) continue; // we found element that's leaf
+        if(visited[current] == 2) continue; // we found element that's leaf or maybe not
         if(depth[current] != curr_depth){
           // we are changing depth, check that we found even number of nodes in this depth
           // fail otherwise
