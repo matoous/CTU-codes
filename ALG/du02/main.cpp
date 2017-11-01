@@ -1,3 +1,4 @@
+// by Matous Dzivjak <dzivjak@matous.me>
 #include <iostream>
 #include <vector>
 #include <map>
