@@ -54,8 +54,7 @@ int main(){
         }
         in_curr_depth++;
         for(auto next : graph[current]){
-          if(next != parent[current]){ // if not path back to the parent
-            if(visited[next] == 0){ // visiting for first time
+           if(visited[next] == 0){ // visiting for first time
               parent[next] = current;
               depth[next] = depth[current] + 1;
               visited[next]++;
@@ -73,11 +72,9 @@ int main(){
               bad = true;
               break;
             }
-          }
         }
       }
       if(!bad) {
-        result.push_back(i); // add starting node
         sort(result.begin(), result.end());
         for(int i = 0; i < MIN(result.size(), 100); i++){
           if(i) printf(" %d", result[i]+1);
