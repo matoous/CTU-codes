@@ -1,3 +1,4 @@
+// by Matous Dzivjak <dzivjak@matous.me>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -53,6 +54,7 @@ int main(){
             int current_toxics = current.lefts.TOXIC + current.ups.TOXIC;
             int current_minerals = current.lefts.MINERALS + current.ups.MINERALS;
             for(int j = MIN(m-i, n-u)-1; j >= lower_bound; j--){
+                // I want to vomit
                 int minerals = grid[i+j][u].ups.MINERALS - grid[i+j][u].lefts.MINERALS
                               + grid[i][u+j].lefts.MINERALS - grid[i][u+j].ups.MINERALS
                               + (IS_MINERAL(current) ? -1 : 0)
