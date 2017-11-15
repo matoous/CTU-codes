@@ -37,7 +37,7 @@ node_t* insert(node_t* root, int key, node_t* parent) {
     root->left = insert(root->left, key, root);
   else
     root->right = insert(root->right, key, root);
-  root->count = ((root->left != NULL) ? root->left->count+1 : 0) + ((root->right != NULL) ? root->right->count+1 : 0);
+  root->count = ((root->left != NULL) ? root->left->count : 0) + ((root->right != NULL) ? root->right->count : 0);
   return root;
 }
 
@@ -68,13 +68,13 @@ void remove(node_t* node, int A, int B, bool hasParent){
       if(node->left != NULL && node->left->value <= B && node->left->value >= A)
         node->left = NULL;
     }
-    if(!hasParent)
-      forest.push_back(node);
     if(node->value < A) {
       remove(node->right, A, B, true);
       if(node->right != NULL && node->right->value <= B && node->right->value >= A)
         node->right = NULL;
     }
+    if(!hasParent)
+      forest.push_back(node);
   }
 }
 
@@ -91,7 +91,7 @@ node_t* max(node_t* node){
   if(node->right == NULL)
     return node;
   else
-    return max(node->right);
+    return max(node->left);
 }
 
 // Value to print at the end
@@ -109,11 +109,6 @@ void bfs(node_t* root){
 
   while(!Q.empty()){
     auto curr = Q.front(); Q.pop();
-    if(curr->depth != lvl){
-      lvl = curr->depth;
-      prev_cnt = curr_cnt;
-      curr_cnt = 0;
-    }
     curr_cnt++;
     if(curr->left != NULL){
       curr->left->depth = curr->depth + 1;
@@ -146,7 +141,7 @@ node_t* merge(vector<node_t*> roots){
   for(auto tree : roots){
     tmp += tree->count+1;
     // Middle node
-    if (tmp >= m && ts == NULL) {
+    if (tmp > m && ts == NULL) {
       ts = tree;
       continue;
     }
