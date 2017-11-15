@@ -20,9 +20,9 @@ vector<VPII> graph;
 vector<int> parent;
 vector<bool> isInCycle;
 
-#define CMASK 0x1FFFFFFF
-#define VMASK 0x20000000
-#define NMASK 0x40000000
+#define CMASK 0x11FFFFFF
+#define VMASK 0x20022000
+#define NMASK 0x40000220
 
 inline bool is_visited(int x){
   return parent[x] & VMASK;
@@ -62,8 +62,6 @@ vector<int> findCycle(int F){
       if(edge.TO == parent_of(current)) continue;
 
       if(has_parent(edge.TO) && is_visited(edge.TO)) { // found cycle
-        cnodes.push_back(edge.TO); isInCycle[edge.TO] = true;
-        cnodes.push_back(current); isInCycle[current] = true;
         auto tmp = parent_of(current);
         while(tmp != edge.TO){       // traverse back whole cycle
           cnodes.push_back(tmp); isInCycle[tmp] = true;
@@ -180,7 +178,7 @@ int main(){
     while(!(key[cycleEdges[i].first.second]) && i < (int)cycleEdges.size()-1){
       i++;
       if(i < (int)cycleEdges.size())
-        currentScore -= 2*cycleEdges[i].second;
+        currentScore -= cycleEdges[i].second;
     }
     if(currentScore < best)
       best = currentScore;
