@@ -143,12 +143,7 @@ node_t* merge(vector<node_t*> roots){
     // Middle node
     if (tmp > m && ts == NULL) {
       ts = tree;
-      continue;
     }
-    if(ts == NULL)
-      lefts.push_back(tree);
-    else
-      rights.push_back(tree);
   }
 
   // Do the merge
