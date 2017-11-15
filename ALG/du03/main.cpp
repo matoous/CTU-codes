@@ -66,9 +66,9 @@ int main(){
               result.push_back(next);
             }
             else {
-              // if we are visitng the node more times we know that the starting points is bad
+              // if we are visitng the node more than 2 times we know that the starting point is not a leaf
               // also happens if we come to node with 2 different depths
-              // would also happen if the tress contained cycles
+              // would also happen if the trees contained cycles
               bad = true;
               break;
             }
