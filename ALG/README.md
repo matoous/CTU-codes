@@ -5,3 +5,7 @@ This will be fun.
 2. recursion
 
 3. BFS
+
+4. BFS/DFS and more
+
+5. BST/BFS
