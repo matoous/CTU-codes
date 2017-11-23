@@ -7,24 +7,7 @@
 
 #define uint64 unsigned long long int
 
-void sys_exit(int error_code){
-    asm volatile("int $0x80" : : "a"(SYSCALL_EXIT), "b"(error_code));
-}
 
-int sys_write(unsigned fd, char *buf, unsigned count){
-    unsigned ret;
-    asm volatile("int $0x80": "=a"(ret) : "a"(SYSCALL_WRITE), "b"(fd), "c"(buf), "d"(count) : "memory");
-    return ret;
-}
-
-int sys_read(unsigned fd, char *buf, unsigned count){
-    unsigned ret;
-    asm volatile("int $0x80" /* Call the syscall interrupt. */
-   : "=a" (ret)
-   : "0" (SYSCALL_READ), "b" (STDIN), "c" (buf), "d" (sizeof(buf))
-   : "memory", "cc");
-    return ret;
-}
 
 void print(uint64 x){
     char tmp[26];
