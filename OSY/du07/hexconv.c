@@ -7,15 +7,31 @@
 
 #define uint64 unsigned long long int
 
+void sys_exit(int error_code){
+    asm volatile("int $0x80" : : "a"(SYSCALL_EXIT), "b"(error_code));
+}
 
+int sys_write(char *buf, unsigned count){
+    unsigned ret;
+    asm volatile("int $0x80": "=a"(ret) : "a"(SYSCALL_WRITE), "b"(STDOUT), "c"(buf), "d"(count) : "memory");
+    return ret;
+}
+
+int sys_read(char *buf, unsigned count){
+    unsigned ret;
+    asm volatile("int $0x80"
+   : "=a" (ret)
+   : "0" (SYSCALL_READ), "b" (STDIN), "c" (buf), "d" (sizeof(buf))
+   : "memory", "cc");
+    return ret;
+}
 
 void print(uint64 x){
     char tmp[26];
     int tmpcnt = 0;
     do{
       tmp[tmpcnt++] = "0123456789abcdef"[x%16];
-      x /= 16;
-    }while(x);
+    }while((x /= 16));
     int cnt = 0;
     char buffer[tmpcnt+2];
     buffer[cnt++] = '0';
@@ -24,7 +40,8 @@ void print(uint64 x){
       buffer[cnt++] = tmp[tmpcnt];
     buffer[cnt++] = '\n';
     buffer[cnt++] = '\0';
-    sys_write(STDOUT, buffer, cnt);
+
+    sys_write(buffer, cnt);
 }
 
 int isnum(char ch){
@@ -45,7 +62,7 @@ int _start()
 
     for ( ; ; i++, chars_in_buffer--) {
       if (chars_in_buffer == 0) {
-        int ret = sys_read(0, buf, sizeof(buf));
+        int ret = sys_read(buf, sizeof(buf));
         if (ret < 0)
           sys_exit(1);
         i = 0;
