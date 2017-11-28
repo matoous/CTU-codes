@@ -112,16 +112,7 @@ node_t* build(int depth){
 
 node_t* reduce(node_t* n){
   condensate(n); // condensate AVL
-  int x = 1;
-  step = 1, idx = 0;
-  while(x*2 < len(reduced_nodes)) // find x for: 2*(2^(x+1)-1) < |reduced_nodes|
-    x = (1 << (1+step++)) - 1;
-  step--;
-  NN = x; // set number of nodes
-  D = step; // set max depth
-  bonus = len(reduced_nodes) - x; // if we place 1 number in each node with how many nodes are we left?
-  n = build(0); // build the new tree
-  reduced_nodes.clear(); // clear for next time
+
   R++; // increment reductions counter
   return n; // return new tree
 }
