@@ -118,6 +118,7 @@ node_t* reduce(node_t* n){
 }
 
 int main(){
+  ios_base::sync_with_stdio(false); // 1200 ms -> 500 ms  ... LOL
   node_t* root = NULL;
   cin >> N >> rct;
   for(int q = 0; q < N; ++q){
