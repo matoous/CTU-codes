@@ -55,59 +55,28 @@ int height_of(node_t *temp){
   return temp->height;
 }
 
-node_t* singleRightRotate(node_t* &t){
-  node_t* u = t->lch;
-  t->lch = u->rch;
-  u->rch = t;
-  t->height = max(height_of(t->lch), height_of(t->rch))+1;
-  u->height = max(height_of(u->lch), t->height)+1;
-  return u;
+node_t* singleRightRotate(node_t* t){
+
 }
 
-node_t* singleLeftRotate(node_t* &t){
-  node_t* u = t->rch;
-  t->rch = u->lch;
-  u->lch = t;
-  t->height = max(height_of(t->lch), height_of(t->rch))+1;
-  u->height = max(height_of(t->rch), t->height)+1 ;
-  return u;
+node_t* singleLeftRotate(node_t* t){
+
 }
 
-node_t* doubleLeftRotate(node_t* &t){
-  t->rch = singleRightRotate(t->rch);
-  return singleLeftRotate(t);
+node_t* doubleLeftRotate(node_t* t){
+
 }
 
-node_t* doubleRightRotate(node_t* &t){
-  t->lch = singleLeftRotate(t->lch);
-  return singleRightRotate(t);
+node_t* doubleRightRotate(node_t* t){
+  
 }
 
 int balance_of(node_t* x){
-  return height_of(x->lch) - height_of(x->rch);
+
 }
 
 node_t* split(node_t* x, int c){
-  int small, mid, big; // Split the node and add this number
-  if(c < min_of(x)){
-    small = c;
-    mid = min_of(x);
-    big = max_of(x);
-  } else if(c > max_of(x)) {
-    big = c;
-    small = min_of(x);
-    mid = max_of(x);
-  } else {
-    mid = c;
-    small = min_of(x);
-    big = max_of(x);
-  }
-  x->lch = new_node(small);
-  x->rch = new_node(big);
-  x->v0 = mid;
-  x->v1 = 0;
-  x->height++;
-  return x;
+
 }
 
 // Insert node into the tree
@@ -115,88 +84,30 @@ node_t* insert(node_t* x, int c){
   if(c == x->v0 || c == x->v1) return x;
   if(is_internal(x)){ // Internal node
     if(c < min_of(x)){
-      x->lch = insert(x->lch, c);
-      if(balance_of(x) == 2 && rc != rct){
-        rc++;
-        if(c <= min_of(x->lch))
-          x = singleRightRotate(x);
-        else
-          x = doubleRightRotate(x);
-      }
+
     }
     else if(max_of(x) < c){
-      x->rch = insert(x->rch, c);
-      if(balance_of(x) == -2 && rc != rct){
-        rc++;
-        if(c >= max_of(x->rch))
-          x = singleLeftRotate(x);
-        else
-          x = doubleLeftRotate(x);
-      }
+
     }
     else {
-      int k = min_of(x);
-      set_min(x, c);
-      c = k;
-      x->lch = insert(x->lch, c);
-      if(balance_of(x) == 2 && rc != rct){
-        rc++;
-        if(c <= min_of(x->lch))
-          x = singleRightRotate(x);
-        else
-          x = doubleRightRotate(x);
-      }
+
     }
-    x->height = max(height_of(x->lch), height_of(x->rch))+1;
+
     return x;
   }
   // Leaf
-  if(!x->v1){ // Place in the node as second number
-    x->v1 = c;
-    return x;
-  }
-  // Leaf
-  x = split(x, c);
-  NN += 2; // Increment total nodes count by 2
-  return x;
+
 }
 
-// nodes for new graph after reduce
-vector<int> reduced_nodes;
-int idx, bonus, step;
 
-// Get all the numbers in sorted order from the tree
-// that should be left in the graph after reduce procedure
+
 void condensate(node_t* n){
-  // Must be inorder!
-  if(is_internal(n->lch)) condensate(n->lch);
-  reduced_nodes.push_back(n->v0);
-  if(n->v1)
-    reduced_nodes.push_back(n->v1);
-  if(is_internal(n->rch)) condensate(n->rch);
+
 }
 
 // Build new tree from reduced AVL tree
 node_t* build(int depth){
-  if(depth == step){ // leaf
-    node_t* z = new_node(reduced_nodes[idx++]);
-    if(bonus){ // can put 2 numbers in this node
-      z->v1 = reduced_nodes[idx++];
-      bonus--;
-    }
-    return z;
-  } else { // inner node
-    node_t* z = new_node(0);
-    z->height += step - depth;
-    z->lch = build(depth+1); // add left children
-    z->v0 = reduced_nodes[idx++];
-    if(bonus){ // can put 2 numbers in this node
-      z->v1 = reduced_nodes[idx++];
-      bonus--;
-    }
-    z->rch = build(depth+1); // add right children
-    return z;
-  }
+
 }
 
 node_t* reduce(node_t* n){
