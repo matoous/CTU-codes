@@ -65,14 +65,14 @@ void remove(node_t* node, int A, int B, bool hasParent){
   else {
     // This node will live
     if(node->value > B){
-      remove(node->left, A, B, true);
+      remove(node->left, A, B, node->left->value < A ? false : true);
       if(node->left != NULL && node->left->value <= B && node->left->value >= A)
         node->left = NULL;
     }
     if(!hasParent)
       forest.push_back(node);
     if(node->value < A) {
-      remove(node->right, A, B, true);
+      remove(node->right, A, B, node->right->value > B ? false : true);
       if(node->right != NULL && node->right->value <= B && node->right->value >= A)
         node->right = NULL;
     }
