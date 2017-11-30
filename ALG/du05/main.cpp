@@ -1,3 +1,4 @@
+// by Matous Dzivjak <dzivjak@matous.me>
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
