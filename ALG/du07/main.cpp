@@ -10,7 +10,6 @@ using namespace std;
 #define TO second
 
 typedef struct node_t {
-  int me;
   vector< pair<char, int> > edges;
 } node_t;
 
