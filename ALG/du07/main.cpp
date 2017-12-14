@@ -12,7 +12,7 @@ using namespace std;
 vector<vector<EDGE>> graph;
 map<pair<int, int>, int> save;
 char rege[21], C;
-int M, I, F, T, now, max;
+int M, I, F, T, now, best = 0;
 
 int Find(int idx, int currentNode){
   if(save.find(make_pair(idx,currentNode)) != save.end())
@@ -42,8 +42,8 @@ int main() {
     graph[--F].push_back(EDGE(C, --T));
   }
   for(int i = 0; i < M; i++)
-    if((now = Find(0, i)) > max)
-        max = now;
-  printf("%d\n", max);
+    if((now = Find(0, i)) > best)
+        best = now;
+  printf("%d\n", best);
   return 0;
 }
