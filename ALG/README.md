@@ -11,3 +11,9 @@ There are mistakes in the solutions, I will repair them when the assignment is o
 4. BFS/DFS and more
 
 5. BST/BFS
+
+6. AVL
+
+7. DP, recursion, strings
+
+8. DP, ez
