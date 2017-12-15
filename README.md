@@ -16,8 +16,10 @@ license:  [Lil license/BSD license combination](https://github.com/matoous/CTU-c
 
 **KAJ** - Klientské aplikace v JavaScriptu *(JavaScript)*
 
-**PSI** - Počítačové sítě *(Client and Server works with selective-repeat now)*
+**PSI** - Počítačové sítě *(C++ and windows shiat)*
 
 **OSY** - Operační systémy *(C, Bash and other shiat)*
+
+**ALG** - Algoritmizace *(C++)*
 
 :fire:
