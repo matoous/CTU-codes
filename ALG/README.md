@@ -1,7 +1,3 @@
-This will be fun.
-
-There are mistakes in the solutions, I will repair them when the assignment is over.
-
 1. O(n^2)
 
 2. recursion
