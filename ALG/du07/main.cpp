@@ -1,4 +1,4 @@
-// by Matous Dzivjak <dzivjak@matous.me>, 48 lines, OH GOD I AM SO GOOD, ALMOST AS SIMON MANOUR, ALMOST...
+// by Matous Dzivjak <dzivjak@matous.me>, 47 lines, OH GOD I AM SO GOOD, ALMOST AS SIMON MANOUR, ALMOST...
 #include <stdio.h>
 #include <vector>
 #include <map>
@@ -30,8 +30,7 @@ int Find(int idx, int currentNode){
       if((score = 1 + Find(tmp + 1, edge.TO)) > bestScore)
         bestScore = score;
   }
-  save[make_pair(idx, currentNode)] = bestScore;
-  return bestScore;
+  return (save[make_pair(idx, currentNode)] = bestScore);
 }
 
 int main() {
@@ -43,7 +42,7 @@ int main() {
   }
   for(int i = 0; i < M; i++)
     if((now = Find(0, i)) > best)
-        best = now;
+      best = now;
   printf("%d\n", best);
   return 0;
 }
