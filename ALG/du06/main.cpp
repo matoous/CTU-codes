@@ -49,7 +49,6 @@ node_t* new_node(int x){
 }
 
 // Get height of the node
-// Can be speeded up by remembering this
 int height_of(node_t *temp){
   if(temp == NULL) return 0;
   return temp->height;
