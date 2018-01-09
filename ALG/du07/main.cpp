@@ -1,4 +1,4 @@
-// by Matous Dzivjak <dzivjak@matous.me>, 48 lines, OH GOD I AM SO GOOD, ALMOST AS SIMON MANOUR, ALMOST...
+// by Matous Dzivjak <dzivjak@matous.me>
 #include <stdio.h>
 #include <vector>
 #include <map>
