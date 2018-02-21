@@ -54,6 +54,10 @@
   (if (= n 0) null
       (append (range (- n 1)) (list n))))
 
+(define (reverse n)
+  (if (null? n) null
+      (append (reverse (cdr n)) (list (car n)))))
+
 (define (fib? n)
   (define (helper num curr prev)
     (cond
