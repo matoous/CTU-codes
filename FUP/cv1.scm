@@ -75,7 +75,7 @@
 (define (reduce arr con) ;implementation of own reduce -> con = condition, lambda function to apply
   (if (null? arr) null
       (append (if (con (car arr)) (list (car arr)) null) (reduce (cdr arr) con))))
-;example: (reduce (range 100) (lambda(x) (fib? x)))
+;example usage: (reduce (range 100) (lambda(x) (fib? x)))
 
 (define (sum n) ;sum from 1..n
   (* (/ (+ n 1) 2) n))
@@ -85,3 +85,8 @@
     (if (= n 0) acc
         (helper (- n 1) (+ acc n))))
   (helper n 0))
+
+(define (map arr fun) ;own map function -> fun = function to apply to each element
+  (if (null? arr) null
+      (append (list (fun (car arr))) (map (cdr arr) fun))))
+;example usage:  (map (range 20) (lambda(x) (* x x)))
