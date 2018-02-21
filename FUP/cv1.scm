@@ -39,3 +39,17 @@
 (define (:randarr l)
   (if (= l 0) null
       (append (list (random 100000)) (:randarr (- l 1)))))
+
+(define (fib n)
+  (cond
+    ((= n 0) 0)
+    ((= n 1) 1)
+    (else (+ (fib (- n 1)) (fib (- n 2))))))
+
+(define (fib? n)
+  (define (helper num curr prev)
+    (cond
+      ((= (- num curr) 0) #t)
+      ((< (- num curr) 0) #f)
+      (else (helper num (+ curr prev) curr))))
+  (helper n 1 0))
