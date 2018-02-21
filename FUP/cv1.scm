@@ -46,6 +46,14 @@
     ((= n 1) 1)
     (else (+ (fib (- n 1)) (fib (- n 2))))))
 
+(define (fibs n)
+  (if (null? n) null
+      (append (list (fib (car n))) (fibs (cdr n)))))
+
+(define (range n)
+  (if (= n 0) null
+      (append (range (- n 1)) (list n))))
+
 (define (fib? n)
   (define (helper num curr prev)
     (cond
