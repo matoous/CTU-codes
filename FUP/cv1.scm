@@ -71,3 +71,7 @@
     (if (= n 0) prev
         (helper (- n 1) curr (+ curr prev))))
   (helper n 0 1))
+
+(define (reduce arr con) ;implementation of own reduce -> con = condition, lambda function to apply
+  (if (null? arr) null
+      (append (if (con (car arr)) (list (car arr)) null) (reduce (cdr arr) con))))
