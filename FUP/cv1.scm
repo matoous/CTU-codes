@@ -15,10 +15,10 @@
             (helper (+ (* x 3) 1) (+ i 1)))))
   (helper x 0))
 
-(define (D a b c)
+(define (D a b c) ;diskriminant
   (- (* b b) (* 4 a c)))
 
-(define (Q a b c)
+(define (Q a b c) ;reseni kvadraticke rovnice
   (if (< (D a b c) 0)
       null
       (list
