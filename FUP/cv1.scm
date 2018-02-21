@@ -26,11 +26,16 @@
        (/ (- (- 0 b) (sqrt (D a b c))) (* 2 a)))))
 
 (define (even? x)
-  (if (= x 0) #t
-     (if (< x 0) #f
-         (even? (- x 2)))))
+  (if (< x 0) (even? (- 0 x))
+      (if (= x 0) #t
+          (if (= x 1) #f
+              (even? (- x 2))))))
 
 (define (pow2? x)
   (if (= x 2) #t
-      (if (< (- x 2) 0) #f
-          (pow2? (/ x 2)))))
+      (if (= (- x (floor x)) 0) (pow2? (/ x 2))
+          #f)))
+
+(define (:randarr l)
+  (if (= l 0) null
+      (append (list (random 100000)) (:randarr (- l 1)))))
