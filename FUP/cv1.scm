@@ -75,3 +75,12 @@
 (define (reduce arr con) ;implementation of own reduce -> con = condition, lambda function to apply
   (if (null? arr) null
       (append (if (con (car arr)) (list (car arr)) null) (reduce (cdr arr) con))))
+
+(define (sum n) ;sum from 1..n
+  (* (/ (+ n 1) 2) n))
+
+(define (ssum n) ;ssum as slow sum
+  (define (helper n acc)
+    (if (= n 0) acc
+        (helper (- n 1) (+ acc n))))
+  (helper n 0))
