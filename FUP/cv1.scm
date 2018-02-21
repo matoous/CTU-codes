@@ -15,10 +15,10 @@
             (helper (+ (* x 3) 1) (+ i 1)))))
   (helper x 0))
 
-(define (D a b c) ;diskriminant
+(define (D a b c) ; diskriminant
   (- (* b b) (* 4 a c)))
 
-(define (Q a b c) ;reseni kvadraticke rovnice
+(define (Q a b c) ; reseni kvadraticke rovnice
   (if (< (D a b c) 0)
       null
       (list
@@ -50,18 +50,24 @@
   (if (null? n) null
       (append (list (fib (car n))) (fibs (cdr n)))))
 
-(define (range n)
+(define (range n) ;range of numbers 1 ... n
   (if (= n 0) null
       (append (range (- n 1)) (list n))))
 
-(define (reverse n)
+(define (reverse n) ;reverse array
   (if (null? n) null
       (append (reverse (cdr n)) (list (car n)))))
 
-(define (fib? n)
+(define (fib? n) ;is it fib number?
   (define (helper num curr prev)
     (cond
       ((= (- num curr) 0) #t)
       ((< (- num curr) 0) #f)
       (else (helper num (+ curr prev) curr))))
   (helper n 1 0))
+
+(define (ffib n) ;linear fib
+  (define (helper n prev curr)
+    (if (= n 0) prev
+        (helper (- n 1) curr (+ curr prev))))
+  (helper n 0 1))
