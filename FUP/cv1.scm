@@ -75,7 +75,7 @@
 (define (filter arr con) ;implementation of own reduce -> con = condition, lambda function to apply
   (if (null? arr) null
       (append (if (con (car arr)) (list (car arr)) null) (filter (cdr arr) con))))
-;example usage: (reduce (range 100) (lambda(x) (fib? x)))
+;example usage: (filter (range 100) (lambda(x) (fib? x)))
 
 (define (sum n) ;sum from 1..n
   (* (/ (+ n 1) 2) n))
