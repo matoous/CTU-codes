@@ -34,23 +34,9 @@ nextPlayer B = C
 nextPlayer C = D
 nextPlayer D = A
 
-testNextPlayer = do
-  print("Test nextPlayer function")
-  if nextPlayer A == B then print("OK") else error("Test Failed")
-  if nextPlayer B == C then print("OK") else error("Test Failed")
-  if nextPlayer C == D then print("OK") else error("Test Failed")
-  if nextPlayer D == A then print("OK") else error("Test Failed")
-
 handScore :: Cards -> Int
 handScore (x:xs) = score x + handScore xs
 handScore [] = 0
-
-testHandScore = do
-  print("Test handScore function")
-  if handScore [Card Club RA] == 10 then print("OK") else error("Test Failed")
-  if handScore [] == 0 then print("OK") else error("Test Failed")
-  if handScore [Card Club RA, Card Club R10, Card Heart R9] == 20 then print("OK") else error("Test Failed")
-  if handScore [Card Heart R9] == 0 then print("OK") else error("Test Failed")
 
 handsScore :: [Cards] -> Maybe Player -> (Int, Int)
 handsScore [acards, bcards, ccards, dcards] (Just A) = (handScore acards + handScore ccards + 10, handScore bcards + handScore dcards)
@@ -71,12 +57,6 @@ lastWinner cards player =
   where
     winner = findWinner (head cards) (take 4 cards) player
     nextWinner = lastWinner (drop 4 cards) (if winner == Nothing then player else (fromJust winner))
-
-testLastWinner = do
-  print("Test lastWinner function")
-  if lastWinner [Card Club RA, Card Club R10, Card Heart R9, Card Heart RA] A == Just D then print("OK") else error("Test Failed")
-  if lastWinner [Card Club RA, Card Club R10, Card Heart R9, Card Heart RA, Card Club R10, Card Club R9, Card Club R8, Card Heart R8] A == Just D then print("OK") else error("Test Failed")
-  if lastWinner [Card Club RA, Card Club R10, Card Heart R9, Card Heart RA, Card Club R10, Card Club R9, Card Club R8, Card Heart R8, Card Club RA, Card Club R10, Card Heart R9, Card Heart RA] A == Just C then print("OK") else error("Test Failed")
 
 handle :: Cards -> Player -> [Cards]
 handle [] _ = [[], [], [], []]
@@ -101,6 +81,66 @@ findWinner firstCard cards player
   where
     nextWinner = (findWinner firstCard (tail cards) (nextPlayer player))
 
+replay :: Cards -> Maybe Winner
+replay [] = Nothing
+replay cards
+  | firstTeamScore > secondTeamScore && gotNoTrick BD handCards = Just (AC, Three)
+  | firstTeamScore > secondTeamScore && secondTeamScore == 0 = Just (AC, Two)
+  | firstTeamScore > secondTeamScore = Just (AC, One)
+  | secondTeamScore > firstTeamScore && gotNoTrick AC handCards = Just (BD, Three)
+  | secondTeamScore > firstTeamScore && firstTeamScore == 0 = Just (BD, Two)
+  | secondTeamScore > firstTeamScore = Just (BD, One)
+  | otherwise = Nothing
+  where
+    handCards = handle cards A
+    lastHandWinner = lastWinner cards A
+    (firstTeamScore, secondTeamScore) = (handsScore handCards lastHandWinner)
+
+
+
+
+
+    -- main = do
+    --   -- Test got no trick function
+    --   print (gotNoTrick BD [[Card Club RA], [], [Card Club R10], []]) -- true
+    --   print (gotNoTrick AC [[Card Club RA], [], [Card Club R10], []]) -- false
+    --   (testNextPlayer)
+    --   (testHandScore)
+    --   (testFindWinner)
+    --   (testLastWinner)
+
+
+
+
+
+
+
+
+
+
+
+
+-- I changed the list, so change it back when testing
+testGame = [Card Heart R7,Card Heart R8,Card Heart R9,Card Heart R10,Card Heart RJ,Card Diamond R7,Card Diamond R8,Card Diamond R9,Card Diamond R10,Card Diamond RJ,Card Spade R7,Card Spade R8,Card Spade R9,Card Spade R10,Card Spade RJ,Card Club R7,Card Club R8,Card Club R9,Card Club R10,Card Club RJ]
+testGame2 = []
+testGame3 = [Card Club RA,Card Club RK,Card Club RQ,Card Club RJ,Card Club R10,Card Club R9,Card Club R7,Card Club R8,Card Spade RA,Card Spade RK,Card Spade RQ,Card Spade RJ,Card Spade R10,Card Spade R9,Card Spade R7,Card Spade R8,Card Diamond RA,Card Diamond RK,Card Diamond RQ,Card Diamond RJ,Card Diamond R7,Card Diamond R9,Card Diamond R8,Card Diamond R10,Card Heart RJ,Card Heart RK,Card Heart RQ,Card Heart RA,Card Heart R7,Card Heart R9,Card Heart R8,Card Heart R10]
+testGame4 = [[Card Club RA], [Card Heart RA], [], [Card Club RK, Card Heart RK]]
+
+testNextPlayer = do
+  print("Test nextPlayer function")
+  if nextPlayer A == B then print("OK") else error("Test Failed")
+  if nextPlayer B == C then print("OK") else error("Test Failed")
+  if nextPlayer C == D then print("OK") else error("Test Failed")
+  if nextPlayer D == A then print("OK") else error("Test Failed")
+
+testHandScore = do
+  print("Test handScore function")
+  if handScore [Card Club RA] == 10 then print("OK") else error("Test Failed")
+  if handScore [] == 0 then print("OK") else error("Test Failed")
+  if handScore [Card Club RA, Card Club R10, Card Heart R9] == 20 then print("OK") else error("Test Failed")
+  if handScore [Card Heart R9] == 0 then print("OK") else error("Test Failed")
+
+
 testFindWinner = do
   print("Test FindWinner function")
   if findWinner (Card Club RA) [Card Club RA, Card Club R10, Card Heart R9, Card Heart RA] A == Just D then print("OK") else error("Test Failed")
@@ -111,32 +151,8 @@ testFindWinner = do
   if findWinner (Card Club RA) [Card Club RA, Card Club R10, Card Heart R9, Card Heart R9] C == Just C then print("OK") else error("Test Failed")
   if findWinner (Card Club R10) [Card Club R10, Card Club R9, Card Club R8, Card Heart R8] D == Just D then print("OK") else error("Test Failed")
 
-replay :: Cards -> Maybe Winner
-replay [] = Nothing
-replay cards
-  | firstTeamScore > secondTeamScore && gotNoTrick BD handCards = Just (AC, Three)
-  | firstTeamScore > secondTeamScore && secondTeamScore == 0 = Just (AC, Two)
-  | firstTeamScore > secondTeamScore = Just (AC, One)
-  | secondTeamScore > firstTeamScore && gotNoTrick AC handCards = Just (BD, Three)
-  | secondTeamScore > firstTeamScore && firstTeamScore == 0 = Just (BD, Two)
-  | secondTeamScore > firstTeamScore = Just (AC, One)
-  | otherwise = Nothing
-  where
-    handCards = handle cards A
-    lastHandWinner = lastWinner cards A
-    (firstTeamScore, secondTeamScore) = (handsScore handCards lastHandWinner)
-
--- I changed the list, so change it back when testing
-testGame = [Card Heart R7,Card Heart R8,Card Heart R9,Card Heart R10,Card Heart RJ,Card Diamond R7,Card Diamond R8,Card Diamond R9,Card Diamond R10,Card Diamond RJ,Card Spade R7,Card Spade R8,Card Spade R9,Card Spade R10,Card Spade RJ,Card Club R7,Card Club R8,Card Club R9,Card Club R10,Card Club RJ]
-testGame2 = []
-testGame3 = [Card Club RA,Card Club RK,Card Club RQ,Card Club RJ,Card Club R10,Card Club R9,Card Club R7,Card Club R8,Card Spade RA,Card Spade RK,Card Spade RQ,Card Spade RJ,Card Spade R10,Card Spade R9,Card Spade R7,Card Spade R8,Card Diamond RA,Card Diamond RK,Card Diamond RQ,Card Diamond RJ,Card Diamond R7,Card Diamond R9,Card Diamond R8,Card Diamond R10,Card Heart RJ,Card Heart RK,Card Heart RQ,Card Heart RA,Card Heart R7,Card Heart R9,Card Heart R8,Card Heart R10]
-testGame4 = [[Card Club RA], [Card Heart RA], [], [Card Club RK, Card Heart RK]]
-
--- main = do
---   -- Test got no trick function
---   print (gotNoTrick BD [[Card Club RA], [], [Card Club R10], []]) -- true
---   print (gotNoTrick AC [[Card Club RA], [], [Card Club R10], []]) -- false
---   (testNextPlayer)
---   (testHandScore)
---   (testFindWinner)
---   (testLastWinner)
+testLastWinner = do
+  print("Test lastWinner function")
+  if lastWinner [Card Club RA, Card Club R10, Card Heart R9, Card Heart RA] A == Just D then print("OK") else error("Test Failed")
+  if lastWinner [Card Club RA, Card Club R10, Card Heart R9, Card Heart RA, Card Club R10, Card Club R9, Card Club R8, Card Heart R8] A == Just D then print("OK") else error("Test Failed")
+  if lastWinner [Card Club RA, Card Club R10, Card Heart R9, Card Heart RA, Card Club R10, Card Club R9, Card Club R8, Card Heart R8, Card Club RA, Card Club R10, Card Heart R9, Card Heart RA] A == Just C then print("OK") else error("Test Failed")
