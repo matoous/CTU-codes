@@ -2,6 +2,8 @@
 
 Homeworks and codes for CTU
 
+You can find much more (KIR dropbox + a lot of my personal additinons) on [DRIVE](https://drive.google.com/open?id=0B33G3DM4Z57yLWRrcVpWTnBIdUE)
+
 Hello fellow students! I hope you find everything that you need in here. I wish you pleasent studies.
 
 e-mail:   dzivjmat@fel.cvut.cz
