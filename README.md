@@ -26,4 +26,6 @@ e-mail:   dzivjmat@fel.cvut.cz
 
 **ALG** - Algoritmizace *(C++)*
 
+**ZUI** - Zaklady umele inteligence
+
 :fire:
