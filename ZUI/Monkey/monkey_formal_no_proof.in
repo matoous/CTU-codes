@@ -1,0 +1,59 @@
+assign(max_seconds,100).
+
+formulas(assumptions).
+
+  % ENVIRONMENT
+  cat!=box.
+  cat!=dog.
+  cat!=banana.
+  box!=dog.
+  box!=banana.
+  dog!=banana.
+
+  p1!=p2.
+  p1!=p3.
+  p1!=p4.
+  p1!=p5.
+  p2!=p3.
+  p2!=p4.
+  p2!=p5.
+  p3!=p4.
+  p3!=p5.
+  p4!=p5.
+
+  object(cat,p1,s0,down).
+  can_move(cat) & can_climb(cat) & -can_push(cat) & -can_be_climbed(cat).
+
+  object(box,p2,s0,down).
+  -can_move(box) & -can_climb(box) & -can_push(box) & can_be_climbed(box) & can_be_pushed(box).
+
+  object(toilet,p5,s0,down).
+  -can_move(toilet) & -can_climb(toilet) & -can_push(toilet) & can_be_climbed(toilet).
+
+  object(dog,p2,s0,up).
+  can_move(dog) & -can_climb(dog) & can_push(dog) & -can_be_climbed(dog).
+
+  object(banana,p4,s0,up).
+  -can_move(banana) & -can_climb(banana) & -can_push(banana) & -can_be_climbed(banana).
+
+  % MOVING
+  all type all pos1 all s1 all pos2 (object(type,pos1,s1,down) & can_move(type) -> object(type,pos2,result(move(type,pos1,pos2),s1),down)).
+  all type all pos all state all other_type all pos1 all pos2 all var1 (object(type,pos,state,var1) & type!=other_type -> object(type,pos,result(move(other_type,pos1,pos2),state),var1)).
+
+  % PUSHING
+  all type all pos1 all s1 all otype all pos2 (object(type,pos1,s1,down) & object(otype,pos1,s1,down) & can_push(type) & can_be_pushed(otype) & type!=otype -> object(type,pos2,result(push(type,otype,pos1,pos2),s1),down) & object(otype,pos2,result(push(type,otype,pos1,pos2),s1),down)).
+  all type all pos all state all other_type all oother_type all pos1 all pos2 all s2 all var (object(type,pos,state,var) & object(other_type,pos2,s2,down) & type!=other_type & can_push(other_type) & type!=oother_type & can_be_pushed(oother_type) & object(oother_type,pos2,s2,down) -> object(type,pos,result(push(other_type,oother_type,pos1,pos2),state),var)).
+
+  % CLIMBING UP
+  all type all other_type all position all state (object(type,position,state,down) & can_climb(type) & object(other_type,position,state,down) & can_be_climbed(other_type) -> object(type,position,result(climb(type),state),up)).
+  all type all position all state all other_type all var (object(type,position,state,var) & type!=other_type & can_climb(other_type) -> object(type,position,result(climb(other_type),state),var)).
+
+  all type all position all state (object(type,position,state,up) & object(banana,position,state,up) -> object(type,position,result(grab_banana, state),up)).
+
+end_of_list.
+
+formulas(goals).
+
+  exists X exists P (object(cat,P,result(grab_banana, X),up)).
+
+end_of_list.
