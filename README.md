@@ -2,15 +2,17 @@
 
 Homeworks and codes for CTU
 
-e-mail:   dzivjmat@fel.cvut.cz
+Hello fellow students! I hope you find everything that you need in here. I wish you pleasent studies.
 
-license:  [Lil license/BSD license combination](https://github.com/matoous/CTU-codes/blob/master/LICENSE.md)
+e-mail:   dzivjmat@fel.cvut.cz
 
 **PRP** - Procedurální programování
 
 **RPH** - Řešení problémů a hry *(C codes and test cases)*
 
 **JAVA** - Programování v Java
+
+**PDV** - Paraleln9 a distribuované výpočty
 
 **APO** - Architektura počítačů *(semestral project is in separate repository)*
 
