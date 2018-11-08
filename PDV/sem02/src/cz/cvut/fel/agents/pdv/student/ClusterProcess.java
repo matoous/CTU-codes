@@ -20,17 +20,18 @@ public class ClusterProcess extends RaftProcess<Map<String, String>> {
         return current().nextInt(2 * networkDelays, 6 * networkDelays) + 2;
     }
 
-    // ostatni procesy v clusteru
+    // other processes in cluster
     private final List<String> otherProcessesInCluster;
-    // maximalni spozdeni v siti
+    // max delay on network
     private final int networkDelays;
 
-    // State machine for store
+    // state machine
     private final KeyValStore store;
-    // State of this server
+    // state of this server
     private StateEnums state;
 
     // FOR EVERYONE
+    
     // latest term server has seen (initialized to 0 on first boot, increases monotonically)
     private int currentTerm;
     // candidateId that received vote in current term (or null if none)
@@ -45,8 +46,12 @@ public class ClusterProcess extends RaftProcess<Map<String, String>> {
     private Map<String, Integer> nextIndex;
     // for each server, index of highest log entry known to be replicated on server (initialized to 0, increases monotonically)
     private Map<String, Integer> matchIndex;
+    // time before rpc request
     private Map<String, Integer> rpcDue;
+    // time before next heartbeat
     private Map<String, Integer> heartBeatDue;
+    
+    // current tick
     private int tick;
 
     // helpers
@@ -63,6 +68,7 @@ public class ClusterProcess extends RaftProcess<Map<String, String>> {
         currentTerm = 0;
         log = new Log();
         commitIndex = 0;
+        // start as follower
         state = StateEnums.FOLLOWER;
         currentLeader = null;
         votesForMe = new HashSet<>();
@@ -83,8 +89,12 @@ public class ClusterProcess extends RaftProcess<Map<String, String>> {
     }
 
     private void stepDown(int term) {
+        // step down from being leader
+        // update term
         currentTerm = term;
+        // become follower
         state = StateEnums.FOLLOWER;
+        // didn't vote for anyone yet
         voteFor = null;
         if (electionTimer < tick || electionTimer == Integer.MAX_VALUE) {
             resetElectionTimer();
@@ -92,10 +102,14 @@ public class ClusterProcess extends RaftProcess<Map<String, String>> {
     }
 
     private void startNewElection() {
+        // check that I am follower or candidate, otherwise I first need to step down
         if ((state == StateEnums.FOLLOWER || state == StateEnums.CANDIDATE) && electionTimer < tick) {
             resetElectionTimer();
+            // increase term
             currentTerm++;
+            // vote for self
             voteFor = getId();
+            // become candidate
             state = StateEnums.CANDIDATE;
             votesForMe = new HashSet<>();
             nextIndex = new HashMap<>();
@@ -112,6 +126,7 @@ public class ClusterProcess extends RaftProcess<Map<String, String>> {
     }
 
     private void sendRequestVote(String peer) {
+        // request vote from peer
         if (state == StateEnums.CANDIDATE && rpcDue.get(peer) <= tick) {
             rpcDue.put(peer, 3 * networkDelays);
             send(peer, new RequestVote(
