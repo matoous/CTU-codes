@@ -29,3 +29,7 @@ e-mail:   dzivjmat@fel.cvut.cz
 **ZUI** - Zaklady umele inteligence
 
 :fire:
+
+### VS-code-extensions.txt
+
+I added file with VS code extensions that I use and you might like them and find them useful too
