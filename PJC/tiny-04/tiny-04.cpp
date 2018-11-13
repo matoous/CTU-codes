@@ -65,7 +65,7 @@ BST::BST(BST const& rhs) {
 };
 
 BST& BST::operator=(BST const& rhs) {
-    if(&rhs == this) rhs;
+    if(&rhs == this) return (*this);
     if (m_root) {
         std::stack<node*> nodes;
         nodes.push(m_root);
@@ -85,6 +85,7 @@ BST& BST::operator=(BST const& rhs) {
     for(auto ele : rhs.preorder_elements()){
         add(ele);
     }
+    return (*this);
 };
 
 BST::BST(BST&& rhs) {
@@ -111,6 +112,7 @@ BST& BST::operator=(BST&& rhs) {
     }
     m_root = rhs.m_root;
     rhs.m_root = nullptr;
+    return (*this);
 };
 
 BST::~BST() {
