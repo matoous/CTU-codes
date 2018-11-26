@@ -37,8 +37,7 @@ class MyPlayer:
         """
         self.adjust()  # set strategy
         self.start_time = time()  # start time
-        alpha = -100000.0  # virtual -infinity
-        beta = 100000.0  # virtual +infinity
+        alpha, beta = -100000.0, 100000.0
         possible_moves = self.get_available_moves(board, self.my_color, self.opponent_color)
         for [x, y] in possible_moves:
             iter_start = time()  # this iteration start time
@@ -138,22 +137,18 @@ class MyPlayer:
                 if board[x][y] == self.my_color:  # my field
                     my_score += self.score_board[x][y]
                     my_material += 1
-                    is_frontier = False
                     for x_ch, y_ch in self.surroundings:
                         if self.is_on_board(x + x_ch, y + y_ch) and board[x + x_ch][y + y_ch] == -1:
-                            is_frontier = True
                             break
-                    if is_frontier:
-                        my_frontiers += 1
+                    else:
+                        my_frontiers += 1 # cool python trick, else after for loop gets executed if you break out of the for loop
                 elif board[x][y] == self.opponent_color:  # opponent field
                     opponent_score += self.score_board[x][y]
                     opponent_material += 1
-                    is_frontier = False
                     for x_ch, y_ch in self.surroundings:
                         if self.is_on_board(x + x_ch, y + y_ch) and board[x + x_ch][y + y_ch] == -1:
-                            is_frontier = True
                             break
-                    if is_frontier:
+                    else:
                         opponent_frontiers += 1
         return self.score(my_score, my_material, my_mobility, my_frontiers, opponent_score, opponent_material, opponent_mobility, opponent_frontiers)
 
@@ -180,6 +175,10 @@ class MyPlayer:
             opponent_mobility = 1
         if my_frontiers == 0:
             my_frontiers = 1
+
+        # Also this is one big bullshit
+        # It would be way better to do some hyperparameter tunning than to randomly guess the numbers
+
         if self.game_time == 1:
             # get mobility, still count with score so we dont jump in bad position and try do decrease number of stones
             return (my_mobility/opponent_mobility) * (my_score - opponent_score) * (opponent_material/my_material)
@@ -266,10 +265,7 @@ class MyPlayer:
         :param y: y coordinate
         :return: boolean
         """
-        if self.board_size > x >= 0 and self.board_size > y >= 0:
-            return True
-        else:
-            return False
+        return True if (self.board_size > x >= 0 and self.board_size > y >= 0) else False
 
     def make_board_copy(self, board):
         """
