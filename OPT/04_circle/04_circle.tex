@@ -24,90 +24,71 @@
 \end{center}
 \section{Zadání}
 \begin{verbatim}
-https://gitlab.fel.cvut.cz/B0B33OPT/public/blob/master/cviceni/03_pca/03_pca.pdf
+https://cw.fel.cvut.cz/wiki/courses/b33opt/cviceni/domaci_ulohy/kruznice/start
 \end{verbatim}
 
 
-\section{Řešení 1. části}
-\subsection{}
-\includegraphics[scale=0.8]{line.png}
+\section{Řešení}
 
-\subsection{}
+Ze zadání máme:
 \begin{center}
-Součet čtverců kolmých vzdáleností je $err = 24.2419$
+$f(x) = \sum_{i=1}^{m}dist(x_i,a_i)^2$\\
+\vspace{5mm}
+$dist(x,a) = \sqrt{(a_0 - x_0)^2 + (a_1 - x_1)^2} - r$
 \end{center}
 
 \subsection{}
-\subsubsection{}
-\begin{center}
-    Nejdříve máme řešení reprezentovat ve formě 
-    $\{ y \in \mathbb{R} ^ 2 | y ^ T \cdot x = \alpha \}$\\
-    Kde
-    \[y =
-    \begin{bmatrix}
-        y_1\\
-        y_2
-    \end{bmatrix}\]
-    $\| y \| = 1$
-    \[x =
-    \begin{bmatrix}
-        x_1\\
-        x_2
-    \end{bmatrix}\]
-    Po roznásobení pro přímku dostáváme rovnici\\
-    $y_1 \cdot x_1 + y_2 \cdot x_2 = \alpha$\\
-    Po dosazení normálového vektoru přímky $n$ (kolmý na směrový vektor přímky, za $y_1$ a $y_2$)
-    a souřadnice těžiště bodů (za $x_1$ a $x_2$)
-    dostáváme $\alpha = -3.3931$\\
-    \[y =
-    \begin{bmatrix}
-        -0.2740\\
-        0.9617
-    \end{bmatrix}\]
-    \[x =
-    \begin{bmatrix}
-        5.1231\\
-        4.9876
-    \end{bmatrix}\]
-\end{center}
-\subsubsection{}
-\begin{center}
-    V druhé části máme řešení reprezentovat ve formě: $\{y_0 + t \cdot s | t \in \mathbb{R} \}$.
-    To však máme stíženo a omezeno podmínkou, že norma $\norm{y_0}$ musí být minimální. Tedy
-    musíme nalézt bod na přímce, který je nejblíže počátku (zatím co jinak bychom mohli použít například
-    již nalezené těžiště bodů).
-\end{center}
+Mějme několik bodů $a_1,...,a_m$ v obecné konfiguraci.
+Je funkce $f$ všude diferencovatelná? 
+Má jedno nebo více lokálních minim?
 
-\section{Řešení 2. části}
+Funkce není spojite diferencovatelná protože v bodě $a_0 = x_0, a_1 = x_1$ nemá derivaci.
+Funkce má nekonečně mnoho lokálních minim. Např. pro jeden jediný bod
+bude funkce nabývat minimam v jakémkoliv bodě, pokud za poloměr dosadíme vzdálenost bodu
+od středu kružnice.
 
 \subsection{}
+Diskutujte, jaký algoritmus je vhodný na minimalizaci funkce $f(x)$ a proč.
+Je možné, aby Gaussův-Newtonův algoritmus na naší úloze divergoval?
+
+Gauss-Newtonova metoda konverguje pomaleji než ostatní metody.
+Výhodou je, že u ní není nutné počítat druhé derivace. 
+Levenberg-Marquardtova metoda je kombinací Gauss-Newtonovo a gradientní
+metody - konverguje rychleji v okolí optima a zároveň zaručuje dostatečnou
+spolehlivost i ve větší vzdálenosti od optima. U Levenberg-Marquardtovi metody
+se také nestává, že by algoritmus nezkonvergoval, což se o Gauss-Newtonovo metodě
+říci nedá.
+
+\subsection{}
+Může se zdát, že algoritmy na nelineární nejmenší čtverce bez omezení nejde použít, 
+protože máme omezení $r \le 0$. Vadí to? 
+Co se stane, budeme-li toto omezení ignorovat? 
+Můžou algoritmy konvergovat k řešení se záporným $r$?
+
+V hodně specifických případech by taková možnost nejspíše mohla nastat. Nicméně 
+záporne $r$ by způsobilo nárůst criterionu (součet čtverců vzdáleností bodů od kružnice),
+protože zatím co pro kladná $r$ se $r$ odčítá pro záporná by se jeho velikost přičítala.
+Tedy ke konvergenci k zápornému číslu by dojít nemělo, což je důvod, proč jsem
+ve své implementaci tuto možnost neošetřoval a při testování nenastal nikdy problém.
+
+\subsection{}
+Najděte nějakou množinu $m \le 3$ bodů $\{a_1,a_2,...,a_m\}$
+a takovou dvojici počátečních parametrů kružnice $x^{(1)}_0$ a $x^{(2)}_0$, 
+aby algoritmus inicializovaný těmito parametry skončil v různých lokálních minimech.
+
+Za množinu bodů zvolíme: $\{(0,3),(1,0)\}$ pak pro $x^{(1)}_0 = (1, 1, 1)$ dostáváme kružnici, kde každý
+bod leží na opačné straně kružnice, střed kružnice je na těžišti těchto dvou bodů a
+poloměr odpovídá jejich vzdálenosti od středu kružnice, zatím co pro $x^{(2)}_0 = (20, 20, 30)$
+dostáváme po konvergenci kružnici, kde oba body leží blízko sebe na kružnici a kružnice má
+velký poloměr
+
 \begin{center}
-Tabulka s optimálními hodnotami kritéria pro $r \in \{1,2,5,10,15\}$\\
-\begin{tabular}{|r|l|}
+    \begin{tabular}{| l | l | l |}
     \hline
-    r & $\sum_{i=1}^{m} \norm{\tilde{a_i} - a_i}^2$ \\
-    \hline \hline
-    1 & $4.6166 \cdot 10^8$ \\
-    2 & $1.6925 \cdot 10^8$ \\
-    5 & $1.0453 \cdot 10^7$\\
-    10 & $1.1982 \cdot 10^6$\\
-    15 & $2.5626 \cdot 10^5$\\
-    \hline
-\end{tabular}
+    body a kružnice $x^{(n)}_0$ & body a stav dokonvergovaný z $x^{(n)}_0$ & graf f\_history pro $x^{(n)}_0$ \\ \hline
+    \includegraphics[scale=0.3]{conv1_init.png} & \includegraphics[scale=0.3]{conv1.png} & \includegraphics[scale=0.3]{conv1_history.png}\\ \hline
+    \includegraphics[scale=0.3]{conv2_init.png} & \includegraphics[scale=0.3]{conv2_end.png} & \includegraphics[scale=0.3]{conv2_history.png}\\ \hline
+    \end{tabular}
 \end{center}
-
-\subsection{}
-\includegraphics[scale=0.5]{walk_2d.png}
-\includegraphics[scale=0.5]{makarena_2d.png}\\
-\includegraphics[scale=0.5]{walk_3d.png}
-\includegraphics[scale=0.5]{makarena_3d.png}\\
-
-\subsection{}
-Pokud se body pohybují pouze po přímce stačí nám pro dosažení nulové aproximační chyby podprostor dimenze 1.
-Tedy zredukujeme reprezentaci na vektor reálných čísel, která budou udávat offset na přímce, po které se body pohybují.
-
-\subsection{}
-Máme počítat optimální chybu aproximace pro různé hosnoti $r \leq n$.
-Dostaneme $n$ čísel, jaký mají vztah k singulárním číslům?
 
 \end{document}

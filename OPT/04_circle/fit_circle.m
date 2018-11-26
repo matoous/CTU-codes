@@ -28,7 +28,7 @@ for iter = 1:opts.iterN
    if strcmp(method, 'GN')
        x = make_GN_iter(x, a);
    else % LM 
-       [x, success] = make_LM_iter(x, a, mu);
+       [x, success] = make_LM_iter(x, a, mu)
        if success
            mu = mu/3; 
        else

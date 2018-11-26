@@ -6,10 +6,13 @@ opts.mu = 1; % for LM
 % these points are for demonstative purposes only. 
 % use your own, try different configurations. 
 % load my_points_1.mat 
-a = [-0.7   0.7 0.7  -0.7
-     -0.3  -0.3 0.8   0.3]; 
+a = [0  1
+     3  0 ]; 
 
-x0 = [0.0 0.2, .7]'; 
+x0 = [1 1 1]'; 
 
-method = 'GN'; 
+method = 'LM'; 
 [x, f_history] = fit_circle(x0, a, method, opts); 
+
+figure;
+scatter(1:length(f_history), f_history);
