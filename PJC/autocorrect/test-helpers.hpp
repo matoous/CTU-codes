@@ -1,5 +1,6 @@
 #pragma once
 
 #include "autocorrect.hpp"
-#include <vector>
-#include <iterator>
+#include <fstream>
+
+size_t lines_in_file(const std::string&);

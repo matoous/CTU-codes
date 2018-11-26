@@ -8,19 +8,29 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(core-files
         autocorrect.cpp
         autocorrect.hpp
-    tests-main.cpp
-    test-helpers.hpp
-    test-helpers.cpp
-    catch.hpp
-)
+        tests-main.cpp
+        test-helpers.hpp
+        test-helpers.cpp
+        catch.hpp
+        picobench.hpp)
+
+set(cli-files
+        autocorrect.cpp
+        autocorrect.hpp)
 
 add_executable(tests
         tests-autocorrect.cpp
     ${core-files}
 )
 
+add_executable(cli
+        cli.cpp
+        ${cli-files}
+        )
+
 set(binaries
         tests
+        cli
 )
 
 foreach(target ${BINARIES})

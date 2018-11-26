@@ -5,12 +5,12 @@
 #include <vector>
 #include <iterator>
 #include <set>
-#include <iostream>
+#include <iosfwd>
 
 using std::size_t;
 
 namespace pjc {
-    const size_t dist(std::string, std::string);
+    const size_t dist(const std::string &, const std::string &);
 
     class autocorrect {
     private:
@@ -18,13 +18,14 @@ namespace pjc {
 
     public:
         autocorrect() = default;
-        explicit autocorrect(std::iostream);
+        explicit autocorrect(std::istream&);
 
         size_t size();
         void add_word(std::string w);
         void remove_word(std::string w);
 
         std::vector<std::string> correct(std::string word);
+        std::vector<std::string> p_correct(std::string word);
         std::vector<std::string> suggest(std::string word);
         std::vector<std::string> suggest(std::string word, int n);
     };

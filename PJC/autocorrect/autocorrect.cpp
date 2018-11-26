@@ -7,7 +7,7 @@
 
 namespace pjc {
 
-    pjc::autocorrect::autocorrect(std::iostream stream) {
+    pjc::autocorrect::autocorrect(std::istream& stream) {
         std::string word;
         while(stream >> word)
             dictionary.insert(word);
@@ -46,9 +46,30 @@ namespace pjc {
         return corrections;
     }
 
+    std::vector<std::string> autocorrect::p_correct(std::string word) {
+        auto corrections = std::vector<std::string>(0);
+        auto bestDistance = word.length();
+        for(const auto& w : dictionary){
+            auto d = dist(word, w);
+            if(d < bestDistance){
+                if(d == 0) {
+                    corrections.clear();
+                    break;
+                }
+                bestDistance = d;
+                corrections.clear();
+                corrections.push_back(w);
+            }
+            else if(d == bestDistance){
+                corrections.push_back(w);
+            }
+        }
+        return corrections;
+    }
+
     std::vector<std::string> autocorrect::suggest(std::string word, int n) {
         auto l = std::vector<std::pair<int, std::string>>(0);
-        
+
         auto res = std::vector<std::string>();
         return res;
     }
@@ -57,26 +78,44 @@ namespace pjc {
         return autocorrect::suggest(std::move(word), 10);
     }
 
-    const size_t dist(std::string s, std::string t) {
-        size_t i,j, temp,tracker;
-        auto m = s.length();
-        auto n = t.length();
-        size_t d[100][100];
-        for(i=0;i<=m;i++)
-            d[0][i] = i;
-        for(j=0;j<=n;j++)
-            d[j][0] = j;
-        for (j=1;j<=m;j++) {
-            for(i=1;i<=n;i++) {
-                if(s[i-1] == t[j-1])
-                    tracker = 0;
+    const size_t dist(const std::string &s1, const std::string &s2)
+    {
+        const size_t m(s1.size());
+        const size_t n(s2.size());
+
+        if( m==0 ) return n;
+        if( n==0 ) return m;
+
+        size_t *costs = new size_t[n + 1];
+        for( size_t k=0; k<=n; k++ ) costs[k] = k;
+        size_t i = 0;
+        for ( std::string::const_iterator it1 = s1.begin(); it1 != s1.end(); ++it1, ++i )
+        {
+            costs[0] = i+1;
+            size_t corner = i;
+
+            size_t j = 0;
+            for ( std::string::const_iterator it2 = s2.begin(); it2 != s2.end(); ++it2, ++j )
+            {
+                size_t upper = costs[j+1];
+                if( *it1 == *it2 )
+                {
+                    costs[j+1] = corner;
+                }
                 else
-                    tracker = 1;
-                temp = std::min((d[i-1][j]+1),(d[i][j-1]+1));
-                d[i][j] = std::min(temp,(d[i-1][j-1]+tracker));
+                {
+                    size_t t(upper<corner?upper:corner);
+                    costs[j+1] = (costs[j]<t?costs[j]:t)+1;
+                }
+
+                corner = upper;
             }
         }
-        return d[n][m];
+
+        size_t result = costs[n];
+        delete [] costs;
+
+        return result;
     }
 
 } // end namespace pjc
