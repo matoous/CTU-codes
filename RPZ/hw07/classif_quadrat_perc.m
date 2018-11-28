@@ -14,7 +14,10 @@ function K = classif_quadrat_perc(tst, model)
 w = model.w;
 b = model.b;
 for i = 1:size(tst,2)
-    t = tst(:,i);
-    K(i) =  double(w(1)*t(1) + w(2)*t(2) + w(3)*t(1)^2 + w(4)*t(1)*t(2)+w(5)*t(2)^2 + b > 0) + 1;
+    if w(1)*tst(1,i) + w(2)*tst(2,i) + w(3)*tst(1,i)^2 + w(4)*tst(1,i)*tst(2,i)+w(5)*tst(2,i)^2 + b > 0
+        K(i) = 1;
+    else
+        K(i) = 2;
+    end
 end
 end
