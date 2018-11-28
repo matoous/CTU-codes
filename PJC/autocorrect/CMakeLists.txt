@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 project(List LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 14)
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -11,38 +13,54 @@ set(core-files
         tests-main.cpp
         test-helpers.hpp
         test-helpers.cpp
-        catch.hpp
-        picobench.hpp)
+        catch.hpp)
 
 set(cli-files
         autocorrect.cpp
         autocorrect.hpp)
+
+set(benchmark-files
+        autocorrect.cpp
+        autocorrect.hpp
+        test-helpers.hpp
+        test-helpers.cpp
+        picobench.hpp)
 
 add_executable(tests
         tests-autocorrect.cpp
     ${core-files}
 )
 
+add_executable(benchmark
+        benchmark-autocorrect.cpp
+        ${benchmark-files}
+        )
+
 add_executable(cli
         cli.cpp
         ${cli-files}
         )
 
+find_package(Threads REQUIRED)
+target_link_libraries(tests Threads::Threads)
+target_link_libraries(benchmark Threads::Threads)
+target_link_libraries(cli Threads::Threads)
+
 set(binaries
         tests
         cli
+        benchmark
 )
 
 foreach(target ${BINARIES})
     if ( CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU" )
-        target_compile_options( ${target} PRIVATE -Wall -Wextra -Wunreachable-code -Wpedantic)
+        target_compile_options( ${target} PRIVATE -Wall -Wextra -Wunreachable-code -Wpedantic -lpthread)
     endif()
     if ( CMAKE_CXX_COMPILER_ID MATCHES "MSVC" )
         target_compile_options( ${target} PRIVATE /W4 )
         target_compile_options( ${target} PRIVATE /utf-8 )
     endif()
 endforeach()
-
 
 enable_testing()
 add_test(NAME tests COMMAND tests)

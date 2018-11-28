@@ -24,8 +24,10 @@ namespace pjc {
         void add_word(std::string w);
         void remove_word(std::string w);
 
-        std::vector<std::string> correct(std::string word);
-        std::vector<std::string> p_correct(std::string word);
+        std::vector<std::string> correct(const std::string&);
+        std::vector<std::vector<std::string>> correct(const std::vector<std::string>&);
+        std::vector<std::vector<std::string>> p_correct(const std::vector<std::string>&);
+
         std::vector<std::string> suggest(std::string word);
         std::vector<std::string> suggest(std::string word, int n);
     };
