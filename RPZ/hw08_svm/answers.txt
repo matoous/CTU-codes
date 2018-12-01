@@ -1,0 +1,5 @@
+question1 : [c]
+question2 : [d]
+question3 : [8, 25, 70]
+question4 : [0.01]
+question5 : [0.045]
