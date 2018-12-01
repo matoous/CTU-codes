@@ -14,6 +14,10 @@
 bool Token::is_binary_op() const {
     return id != TokenId::End && std::strchr(BINOPS, static_cast<char>(id)) != nullptr;
 }
+
+bool Token::is_function() const {
+    return id == TokenId::Identifier && (identifier == "sin" || identifier == "cos" || identifier == "log");
+}
 //------------------------------------------------------------------------------
 
 int Token::op_precedence() const {

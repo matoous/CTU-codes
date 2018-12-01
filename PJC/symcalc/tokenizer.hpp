@@ -43,6 +43,7 @@ struct Token
     bool is_binary_op() const;
     int op_precedence() const;
     Associativity associativity() const;
+    bool is_function() const;
 };
 
 static inline bool operator==(const Token &a, const Token &b) {
