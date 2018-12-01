@@ -1,4 +1,0 @@
-question1 : [b]
-question2 : [e]
-question3 : [b]
-question4 : [d]

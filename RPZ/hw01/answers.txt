@@ -1,5 +1,0 @@
-question1 : zeros
-question2 : '*' # enclose special characters in parentheses
-question3 : '.*' # enclose special characters in parentheses
-question4 : [c,e]
-question5 : [d]

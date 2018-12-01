@@ -28,6 +28,8 @@ namespace exprs {
         friend class expr;
 
     public:
+        std::string var;
+
         explicit variable(std::string);
 
         double evaluate(const variable_map_t &variables) const override;
@@ -42,7 +44,6 @@ namespace exprs {
     private:
         void write(std::ostream &out, WriteFormat fmt) const override;
 
-        std::string var;
     };
 
 

@@ -31,35 +31,49 @@ public:
         return output.front();
     }
 
+    bool empty(){
+        return output.empty();
+    }
+
+    void pop(){
+        return output.pop_back();
+    }
+
     void apply_token(Token& t){
         expr x,y;
         switch (t.id) {
             case TokenId::Plus:
+                if(output.size() < 2) throw parse_error("not enough numbers to apply operator +");
                 x = output.back(); output.pop_back();
                 y = output.back(); output.pop_back();
                 output.push_back(y + x);
                 break;
             case TokenId::Minus:
+                if(output.size() < 2) throw parse_error("not enough numbers to apply operator -");
                 x = output.back(); output.pop_back();
                 y = output.back(); output.pop_back();
                 output.push_back(y - x);
                 break;
             case TokenId::Multiply:
+                if(output.size() < 2) throw parse_error("not enough numbers to apply operator *");
                 x = output.back(); output.pop_back();
                 y = output.back(); output.pop_back();
                 output.push_back(y * x);
                 break;
             case TokenId::Divide:
+                if(output.size() < 2) throw parse_error("not enough numbers to apply operator /");
                 x = output.back(); output.pop_back();
                 y = output.back(); output.pop_back();
                 output.push_back(y / x);
                 break;
             case TokenId::Power:
+                if(output.size() < 2) throw parse_error("not enough numbers to apply operator ^");
                 x = output.back(); output.pop_back();
                 y = output.back(); output.pop_back();
                 output.push_back(pow(y,x));
                 break;
             case TokenId::Identifier:
+                if(output.empty()) throw parse_error("not enough numbers to apply function");
                 if(t.is_function()){
                     x = output.back(); output.pop_back();
                     if(t.identifier == "sin") output.push_back(sin(x));
@@ -84,17 +98,17 @@ expr create_expression_tree(const std::string& expression) {
     auto output = expr_queue();
     auto stack = std::stack<Token>();
     bool needs_parenthesis = false;
+    bool need_oper = false;
+    TokenId prev = TokenId::End;
 
     while(true){
         try {
             auto token = tknzr.next();
-            if(needs_parenthesis && token.id != TokenId::LParen)
-                throw tokenize_error("missing parenthesis for function");
             switch (token.id){
                 case TokenId::End:
                     while(!stack.empty()){
                         if(stack.top().id == TokenId::LParen || stack.top().id == TokenId::RParen){
-                            throw tokenize_error("failed conversion");
+                            throw parse_error("parenthesis don't match");
                         } else {
                             output.apply_token(stack.top());
                             stack.pop();
@@ -102,29 +116,47 @@ expr create_expression_tree(const std::string& expression) {
                     }
                     break;
                 case TokenId::Number:
+                    if(need_oper) throw parse_error("missing operation");
+                    need_oper = true;
                     output.push(expr::number(token.number));
                     break;
                 case TokenId::Identifier:
-                    if(token.identifier == "sin" || token.identifier == "cos" || token.identifier == "log"){
-                        needs_parenthesis = true;
-                        stack.push(token);
-                    } else {
-                        output.push(expr::variable(token.identifier));
-                    }
+                    if(need_oper) throw parse_error("missing operation");
+                    need_oper = true;
+                    output.push(expr::variable(token.identifier));
                     break;
                 case TokenId::LParen:
-                    if(needs_parenthesis) needs_parenthesis = false;
+                    if(prev == TokenId::Identifier){
+                        // we got function call
+                        if(const exprs::variable* x = dynamic_cast<exprs::variable const*>(output.back()->shared_from_this().get())){
+                            if(!(x->var == "sin" || x->var == "cos" || x->var == "log")){
+                                throw unknown_function_exception(x->var);
+                            }
+                            stack.push(Token(TokenId::Identifier, x->var));
+                            output.pop();
+                        } else {
+                            throw parse_error("shouldn't happen");
+                        }
+                    }
+                    need_oper = false;
                     stack.push(token);
                     break;
                 case TokenId::RParen:
-                    while(stack.top().id != TokenId::LParen){
+                    if(prev == TokenId::LParen) throw parse_error("missing left parenthesis");
+                    need_oper = true;
+                    while(!stack.empty() && stack.top().id != TokenId::LParen){
                         output.apply_token(stack.top());
                         stack.pop();
                     }
-                    // pop the left bracket
-                    stack.pop();
+                    if(!stack.empty()){
+                        // pop the left bracket
+                        stack.pop();
+                    } else {
+                        throw parse_error("couldn't find matching left parenthesis");
+                    }
                     break;
                 case TokenId::Plus: case TokenId::Minus: case TokenId::Multiply: case TokenId::Divide: case TokenId::Power:
+                    need_oper = false;
                     while(
                             !stack.empty()
                             && (stack.top().is_function()
@@ -138,11 +170,15 @@ expr create_expression_tree(const std::string& expression) {
                     stack.push(token);
                     break;
             }
+            prev = token.id;
             if(token.id == TokenId::End) break;
         }
         catch (const tokenize_error &e) {
             throw e;
         }
+    }
+    if(needs_parenthesis){
+        throw parse_error("missing parenthesis for function");
     }
 
     return output.result();

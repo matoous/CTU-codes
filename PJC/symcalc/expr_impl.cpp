@@ -8,11 +8,11 @@ namespace exprs {
     // TODO
 
     double expr_plus::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        return one->evaluate(variables) + two->evaluate(variables);
     }
 
     expr expr_plus::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        return std::make_shared<expr_plus>(expr_plus(one->derive(variable), two->derive(variable)));
     }
 
     expr expr_plus::simplify() const {
@@ -40,11 +40,11 @@ namespace exprs {
     }
 
     double expr_minus::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        return one->evaluate(variables) - two->evaluate(variables);
     }
 
     expr expr_minus::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        return std::make_shared<expr_minus>(expr_minus(one->derive(variable), two->derive(variable)));
     }
 
     expr expr_minus::simplify() const {
@@ -69,11 +69,13 @@ namespace exprs {
     expr_minus::expr_minus(const expr &left, const expr &right) : one(left), two(right) {};
 
     double expr_multiply::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        return one->evaluate(variables) * two->evaluate(variables);
     }
 
     expr expr_multiply::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        auto l = std::make_shared<expr_multiply>(one->derive(variable), two);
+        auto r = std::make_shared<expr_multiply>(one, two->derive(variable));
+        return std::make_shared<expr_plus>(expr_plus(l, r));
     }
 
     expr expr_multiply::simplify() const {
@@ -107,11 +109,15 @@ namespace exprs {
     expr_multiply::expr_multiply(const expr &a, const expr &b) : one(a), two(b) {};
 
     double expr_divide::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        return one->evaluate(variables) / two->evaluate(variables);
     }
 
     expr expr_divide::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        auto l = std::make_shared<expr_multiply>(one->derive(variable), two);
+        auto r = std::make_shared<expr_multiply>(one, two->derive(variable));
+        auto top = std::make_shared<expr_minus>(expr_minus(l, r));
+        auto bot = std::make_shared<expr_pow>(expr_pow(two, expr::number(2)));
+        return std::make_shared<expr_divide>(expr_divide(top, bot));
     }
 
     expr expr_divide::simplify() const {
@@ -142,11 +148,16 @@ namespace exprs {
     expr_divide::expr_divide(const expr &a, const expr &b) : one(a), two(b) {};
 
     double expr_pow::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        return pow(one->evaluate(variables), two->evaluate(variables));
     }
 
     expr expr_pow::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        auto mul = shared_from_this();
+        auto top = std::make_shared<expr_multiply>(expr_multiply(one->derive(variable), two));
+        auto l = std::make_shared<expr_divide>(expr_divide(top, one));
+        auto r = std::make_shared<expr_multiply>(expr_multiply(log(one),two->derive(variable)));
+        auto mul2 = std::make_shared<expr_plus>(expr_plus(l,r));
+        return std::make_shared<expr_multiply>(expr_multiply(mul, mul2));
     }
 
     expr expr_pow::simplify() const {
@@ -180,11 +191,11 @@ namespace exprs {
     expr_pow::expr_pow(const expr &a, const expr &b) : one(a), two(b) {};
 
     double expr_sin::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        return sin(one->evaluate(variables));
     }
 
     expr expr_sin::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        return std::make_shared<expr_multiply>(cos(one), one->derive(variable));
     }
 
     expr expr_sin::simplify() const {
@@ -206,11 +217,12 @@ namespace exprs {
     expr_sin::expr_sin(const expr &a) : one(a) {};
 
     double expr_cos::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        return cos(one->evaluate(variables));
     }
 
     expr expr_cos::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        auto l = std::make_shared<expr_minus>(expr::ZERO, sin(one));
+        return std::make_shared<expr_multiply>(l, one->derive(variable));
     }
 
     expr expr_cos::simplify() const {
@@ -232,11 +244,24 @@ namespace exprs {
     expr_cos::expr_cos(const expr &a) : one(a) {};
 
     double expr_log::evaluate(const expr_base::variable_map_t &variables) const {
-        throw std::logic_error("not implemented yet");
+        auto of = one->evaluate(variables);
+        try {
+            auto res = std::log(of);
+            if(std::isnan(res)){
+                throw domain_exception("log of negative number");
+            }
+            if(std::isinf(res)){
+                throw domain_exception("log of zero");
+            }
+            return res;
+        }
+        catch(...){
+            throw domain_exception("log of zero");
+        }
     }
 
     expr expr_log::derive(std::string const &variable) const {
-        throw std::logic_error("not implemented yet");
+        return std::make_shared<expr_divide>(expr_divide(one->derive(variable), one));
     }
 
     expr expr_log::simplify() const {
@@ -271,7 +296,7 @@ namespace exprs {
     }
 
     expr number::derive(std::string const &variable) const {
-        return expr();
+        return expr::ZERO;
     }
 
     expr number::simplify() const {
@@ -292,11 +317,17 @@ namespace exprs {
     }
 
     double variable::evaluate(const expr_base::variable_map_t &variables) const {
-        return 0;
+        if(variables.find(var) == variables.end()){
+            throw unbound_variable_exception("");
+        }
+        return variables.at(var);
     }
 
     expr variable::derive(std::string const &variable) const {
-        return expr();
+        if(variable.compare(var) == 0){
+            return expr::number(1);
+        }
+        return expr::ZERO;
     }
 
     expr variable::simplify() const {
