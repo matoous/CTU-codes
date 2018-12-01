@@ -16,7 +16,14 @@ namespace exprs {
     }
 
     expr expr_plus::simplify() const {
-        throw std::logic_error("not implemented yet");
+        auto l = one->simplify(); auto r = two->simplify();
+        if(l == expr::ZERO){
+            return r;
+        }
+        if(r == expr::ZERO){
+            return l;
+        }
+        return std::make_shared<exprs::expr_plus>(expr_plus(l,r));
     }
 
     expr_plus::expr_plus(const expr &a, const expr &b) : one(a), two(b) {}
@@ -26,6 +33,9 @@ namespace exprs {
     }
 
     bool expr_plus::equals(const expr_base &b) const {
+        if(const expr_plus* v = dynamic_cast<expr_plus const*>(b.shared_from_this().get())) {
+            return v->one == one && v->two == two;
+        }
         return false;
     }
 
@@ -38,7 +48,11 @@ namespace exprs {
     }
 
     expr expr_minus::simplify() const {
-        throw std::logic_error("not implemented yet");
+        auto l = one->simplify(); auto r = two->simplify();
+        if(r == expr::ZERO){
+            return l;
+        }
+        return std::make_shared<exprs::expr_minus>(expr_minus(l,r));
     }
 
     void expr_minus::write(std::ostream &out, expr_base::WriteFormat fmt) const {
@@ -46,7 +60,10 @@ namespace exprs {
     }
 
     bool expr_minus::equals(const expr_base &b) const {
-        throw std::logic_error("not implemented yet");
+        if(const expr_minus* v = dynamic_cast<expr_minus const*>(b.shared_from_this().get())) {
+            return v->one == one && v->two == two;
+        }
+        return false;
     }
 
     expr_minus::expr_minus(const expr &left, const expr &right) : one(left), two(right) {};
@@ -60,7 +77,20 @@ namespace exprs {
     }
 
     expr expr_multiply::simplify() const {
-        throw std::logic_error("not implemented yet");
+        auto l = one->simplify(); auto r = two->simplify();
+        if(l == expr::ZERO){
+            return expr::ZERO;
+        }
+        if(r == expr::ZERO){
+            return expr::ZERO;
+        }
+        if(l == expr::ONE){
+            return r;
+        }
+        if(r == expr::ONE){
+            return l;
+        }
+        return std::make_shared<exprs::expr_multiply>(expr_multiply(l,r));
     }
 
     void expr_multiply::write(std::ostream &out, expr_base::WriteFormat fmt) const {
@@ -68,7 +98,10 @@ namespace exprs {
     }
 
     bool expr_multiply::equals(const expr_base &b) const {
-        throw std::logic_error("not implemented yet");
+        if(const expr_multiply* v = dynamic_cast<expr_multiply const*>(b.shared_from_this().get())) {
+            return v->one == one && v->two == two;
+        }
+        return false;
     }
 
     expr_multiply::expr_multiply(const expr &a, const expr &b) : one(a), two(b) {};
@@ -82,7 +115,17 @@ namespace exprs {
     }
 
     expr expr_divide::simplify() const {
-        throw std::logic_error("not implemented yet");
+        auto l = one->simplify(); auto r = two->simplify();
+        if(l == expr::ZERO && r == expr::ZERO){
+            return shared_from_this();
+        }
+        if(l == expr::ZERO){
+            return expr::ZERO;
+        }
+        if(r == expr::ONE){
+            return l;
+        }
+        return std::make_shared<exprs::expr_divide>(expr_divide(l,r));
     }
 
     void expr_divide::write(std::ostream &out, expr_base::WriteFormat fmt) const {
@@ -90,7 +133,10 @@ namespace exprs {
     }
 
     bool expr_divide::equals(const expr_base &b) const {
-        throw std::logic_error("not implemented yet");
+        if(const expr_divide* v = dynamic_cast<expr_divide const*>(b.shared_from_this().get())) {
+            return v->one == one && v->two == two;
+        }
+        return false;
     }
 
     expr_divide::expr_divide(const expr &a, const expr &b) : one(a), two(b) {};
@@ -104,7 +150,20 @@ namespace exprs {
     }
 
     expr expr_pow::simplify() const {
-        throw std::logic_error("not implemented yet");
+        auto l = one->simplify(); auto r = two->simplify();
+        if(r == expr::ONE){
+            return l;
+        }
+        if(l == expr::ZERO && r == expr::ZERO){
+            return expr::ONE;
+        }
+        if(r == expr::ZERO){
+            return expr::ONE;
+        }
+        if(l == expr::ZERO){
+            return expr::ZERO;
+        }
+        return std::make_shared<exprs::expr_pow>(expr_pow(l,r));
     }
 
     void expr_pow::write(std::ostream &out, expr_base::WriteFormat fmt) const {
@@ -112,7 +171,10 @@ namespace exprs {
     }
 
     bool expr_pow::equals(const expr_base &b) const {
-        throw std::logic_error("not implemented yet");
+        if(const expr_pow* v = dynamic_cast<expr_pow const*>(b.shared_from_this().get())) {
+            return v->one == one && v->two == two;
+        }
+        return false;
     }
 
     expr_pow::expr_pow(const expr &a, const expr &b) : one(a), two(b) {};
@@ -126,7 +188,8 @@ namespace exprs {
     }
 
     expr expr_sin::simplify() const {
-        throw std::logic_error("not implemented yet");
+        auto l = one->simplify();
+        return std::make_shared<exprs::expr_sin>(expr_sin(l));
     }
 
     void expr_sin::write(std::ostream &out, expr_base::WriteFormat fmt) const {
@@ -134,7 +197,10 @@ namespace exprs {
     }
 
     bool expr_sin::equals(const expr_base &b) const {
-        throw std::logic_error("not implemented yet");
+        if(const expr_sin* v = dynamic_cast<expr_sin const*>(b.shared_from_this().get())) {
+            return v->one == one;
+        }
+        return false;
     }
 
     expr_sin::expr_sin(const expr &a) : one(a) {};
@@ -148,7 +214,8 @@ namespace exprs {
     }
 
     expr expr_cos::simplify() const {
-        throw std::logic_error("not implemented yet");
+        auto l = one->simplify();
+        return std::make_shared<exprs::expr_cos>(expr_cos(l));
     }
 
     void expr_cos::write(std::ostream &out, expr_base::WriteFormat fmt) const {
@@ -156,7 +223,10 @@ namespace exprs {
     }
 
     bool expr_cos::equals(const expr_base &b) const {
-        throw std::logic_error("not implemented yet");
+        if(const expr_cos* v = dynamic_cast<expr_cos const*>(b.shared_from_this().get())) {
+            return v->one == one;
+        }
+        return false;
     }
 
     expr_cos::expr_cos(const expr &a) : one(a) {};
@@ -170,7 +240,11 @@ namespace exprs {
     }
 
     expr expr_log::simplify() const {
-        throw std::logic_error("not implemented yet");
+        expr x = one->simplify();
+        if(x == expr::ONE) {
+            return expr::ZERO;
+        }
+        return std::make_shared<exprs::expr_log>(expr_log(x));
     }
 
     expr_log::expr_log(const expr &a) : one(a) {};
@@ -180,7 +254,10 @@ namespace exprs {
     }
 
     bool expr_log::equals(const expr_base &b) const {
-        throw std::logic_error("not implemented yet");
+        if(const expr_log* v = dynamic_cast<expr_log const*>(b.shared_from_this().get())) {
+            return v->one == one;
+        }
+        return false;
     }
 
     number::number(double a): num(a) {}
@@ -198,10 +275,13 @@ namespace exprs {
     }
 
     expr number::simplify() const {
-        return expr();
+        return shared_from_this();
     }
 
     bool number::equals(const expr_base &b) const {
+        if(const number* v = dynamic_cast<number const*>(b.shared_from_this().get())) {
+            return v->num == num;
+        }
         return false;
     }
 
@@ -220,10 +300,13 @@ namespace exprs {
     }
 
     expr variable::simplify() const {
-        return expr();
+        return shared_from_this();
     }
 
     bool variable::equals(const expr_base &b) const {
+        if(const variable* v = dynamic_cast<variable const*>(b.shared_from_this().get())) {
+            return v->var == var;
+        }
         return false;
     }
 } // namespace exprs

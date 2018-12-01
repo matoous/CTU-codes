@@ -10,68 +10,78 @@
 const expr expr::ZERO = expr::number(0.0);
 const expr expr::ONE = expr::number(1.0);
 
-class expr_stack {
+class expr_queue {
 private:
     std::deque<expr> output;
 
 public:
-    expr_stack() {
+    expr_queue() {
         output = std::deque<expr>();
     }
 
+    void push(const expr& e){
+        output.push_back(e);
+    }
+
+    const expr& back() {
+        return output.back();
+    }
+
+    expr result() {
+        return output.front();
+    }
+
+    void apply_token(Token& t){
+        expr x,y;
+        switch (t.id) {
+            case TokenId::Plus:
+                x = output.back(); output.pop_back();
+                y = output.back(); output.pop_back();
+                output.push_back(y + x);
+                break;
+            case TokenId::Minus:
+                x = output.back(); output.pop_back();
+                y = output.back(); output.pop_back();
+                output.push_back(y - x);
+                break;
+            case TokenId::Multiply:
+                x = output.back(); output.pop_back();
+                y = output.back(); output.pop_back();
+                output.push_back(y * x);
+                break;
+            case TokenId::Divide:
+                x = output.back(); output.pop_back();
+                y = output.back(); output.pop_back();
+                output.push_back(y / x);
+                break;
+            case TokenId::Power:
+                x = output.back(); output.pop_back();
+                y = output.back(); output.pop_back();
+                output.push_back(pow(y,x));
+                break;
+            case TokenId::Identifier:
+                if(t.is_function()){
+                    x = output.back(); output.pop_back();
+                    if(t.identifier == "sin") output.push_back(sin(x));
+                    if(t.identifier == "cos") output.push_back(cos(x));
+                    if(t.identifier == "log") output.push_back(log(x));
+                }
+                break;
+            default:
+                throw tokenize_error("attempt to apply unknown thing");
+        }
+    }
 
 };
 
 // TODO: overloaded operators +, -, *, /, functions pow, log, sin, cos,
 //       expr::number, expr::variable, operator==, operator<<,
-//       create_expression_tree
-
-void apply_token(std::deque<expr>& out, Token& t){
-    expr x,y;
-    switch (t.id) {
-        case TokenId::Plus:
-            x = out.back(); out.pop_back();
-            y = out.back(); out.pop_back();
-            out.push_back(y + x);
-            break;
-        case TokenId::Minus:
-            x = out.back(); out.pop_back();
-            y = out.back(); out.pop_back();
-            out.push_back(y - x);
-            break;
-        case TokenId::Multiply:
-            x = out.back(); out.pop_back();
-            y = out.back(); out.pop_back();
-            out.push_back(y * x);
-            break;
-        case TokenId::Divide:
-            x = out.back(); out.pop_back();
-            y = out.back(); out.pop_back();
-            out.push_back(y / x);
-            break;
-        case TokenId::Power:
-            x = out.back(); out.pop_back();
-            y = out.back(); out.pop_back();
-            out.push_back(pow(y,x));
-            break;
-        case TokenId::Identifier:
-            if(t.is_function()){
-                x = out.back(); out.pop_back();
-                if(t.identifier == "sin") out.push_back(sin(x));
-                if(t.identifier == "cos") out.push_back(cos(x));
-                if(t.identifier == "log") out.push_back(log(x));
-            }
-            break;
-        default:
-            throw tokenize_error("attempt to apply unknown thing");
-    }
-}
 
 expr create_expression_tree(const std::string& expression) {
     auto xxx = std::stringstream(expression);
     auto tknzr = Tokenizer(xxx);
 
-    auto output = std::deque<expr>(0);
+    auto output = expr_queue();
     auto stack = std::stack<Token>();
     bool needs_parenthesis = false;
 
@@ -86,20 +96,20 @@ expr create_expression_tree(const std::string& expression) {
                         if(stack.top().id == TokenId::LParen || stack.top().id == TokenId::RParen){
                             throw tokenize_error("failed conversion");
                         } else {
-                            apply_token(output, stack.top());
+                            output.apply_token(stack.top());
                             stack.pop();
                         }
                     }
                     break;
                 case TokenId::Number:
-                    output.push_back(expr::number(token.number));
+                    output.push(expr::number(token.number));
                     break;
                 case TokenId::Identifier:
                     if(token.identifier == "sin" || token.identifier == "cos" || token.identifier == "log"){
                         needs_parenthesis = true;
                         stack.push(token);
                     } else {
-                        output.push_back(expr::variable(token.identifier));
+                        output.push(expr::variable(token.identifier));
                     }
                     break;
                 case TokenId::LParen:
@@ -108,7 +118,7 @@ expr create_expression_tree(const std::string& expression) {
                     break;
                 case TokenId::RParen:
                     while(stack.top().id != TokenId::LParen){
-                        apply_token(output, stack.top());
+                        output.apply_token(stack.top());
                         stack.pop();
                     }
                     // pop the left bracket
@@ -122,7 +132,7 @@ expr create_expression_tree(const std::string& expression) {
                                 || (stack.top().is_binary_op() && stack.top().op_precedence() == token.op_precedence() && stack.top().associativity() == Associativity::Left))
                             && stack.top().id != TokenId::LParen)
                     {
-                        apply_token(output, stack.top());
+                        output.apply_token(stack.top());
                         stack.pop();
                     }
                     stack.push(token);
@@ -135,12 +145,11 @@ expr create_expression_tree(const std::string& expression) {
         }
     }
 
-    return output.front();
+    return output.result();
 }
 
 bool operator==(const expr &a, const expr &b) {
-    // TODO
-    throw std::logic_error("not implemented");
+    return a->equals(b->shared_from_this().operator*());
 }
 
 expr expr::number(double n) {
