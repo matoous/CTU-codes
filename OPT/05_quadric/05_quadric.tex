@@ -1,0 +1,113 @@
+\documentclass[10pt,a4paper,openright]{article}
+\usepackage{amsfonts}
+\usepackage{float}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,verbatim}
+\textheight=240mm
+\textwidth=170mm
+\topmargin=-15mm
+\oddsidemargin=-6mm
+\evensidemargin=\oddsidemargin
+\newcommand\tab[1][1cm]{\hspace*{#1}}
+\usepackage{hyperref}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\begin{document}
+	\begin{flushleft}
+		\large Name: Matouš Dzivjak\\
+		\large Date: 7.12.2018\\
+	\end{flushleft}
+\begin{center}
+	\huge Quadric
+\end{center}
+\section{Zadání}
+\begin{verbatim}
+https://cw.fel.cvut.cz/wiki/courses/b33opt/cviceni/domaci_ulohy/quadric/start
+\end{verbatim}
+
+
+\section{Řešení}
+
+\subsection{Pokus č. 1}
+Úlohu budeme řešit jako minimalizační úlohu vzdálenosti bodu $x$ od bodu $a$
+za podmínky $x^TQx = 1$. Tedy využijeme Lagrangeových multiplikátorů. Napadnout nás mohlo 
+například i lineární programování, ale omezující podmínka je ve tvaru rovnice nikoliv
+nerovnice.
+
+Podmínku $x^TQx = 1$ můžeme přepsat jako $x^TQx - 1 = 0$.
+Dostáváme tedy dvě rovnice:
+
+\begin{center}
+	$\norm{x - a} = 0$
+
+	\vspace{.1cm}
+
+	$x^TQx - 1 = 0$
+\end{center}
+
+Vytvoříme Lagrangeovu funkci:
+
+\begin{center}
+	$\mathcal{L}(x, a, \lambda) = \norm{x - a} + \lambda (x^TQx - 1)$
+\end{center}
+
+To jsem udělal v matlabu. Nejdříve připravil matici symbolických proměnných $x$ 
+a symbolickou proměnnou $\lambda$. Pak jsem rovnici $\mathcal{L}$ zderivoval podle
+všech těchto proměnných $(x_{1}, x_{2}, ..., x_{n}, \lambda)$ a položil všechny
+tyto rovnice rovny 0. Pak jsem použil matlabovskou funkci $solve$ pro proměnné
+$x_{1}, x_{2}, ..., x_{n}$ tedy prvky matice $x$ a...
+
+...nedostalo se mi žádného řešení. Vydal jsem se špatným směrem.
+Řešení tedy bude nejspíše spočívat v některé z numerických metod.
+
+\subsection{Pokus č. 2}
+Vyžijeme symetričnosti matice. Vememe její spektrální rozklad:
+
+\begin{center}
+	$Q = V \Lambda V^T$
+\end{center}
+
+Kde $V$ je ortogonální matice s vlastními vektory ve sloupcích.
+A $\Lambda$ je diagonální matice vlastních čísel.
+Poté dostáváme:
+
+\begin{center}
+	$x^T Q x = x^T V \Lambda V^T x$
+\end{center}
+
+Můžeme tedy zadefinovat matici změny báze a udělat bijekci:
+
+\begin{center}
+	$y = V^Tx \iff Vy=x$
+\end{center}
+
+Úlohu následně vyřešíme pro $y$ a najdeme jednoznačně $x$ tímto inverzním zobrazením.
+Tím se nám úloha mění na:
+
+\begin{center}
+	$\min\limits_{\forall y \in \mathbb{R}^ n} \norm{a - y}^2$ za p. $y^T \Lambda y = \sum^{n}_{i=1}(\lambda_i y_i^2) = 1$
+\end{center}
+
+Řešení lze nalézt pomocí Lagrangeových multiplikátorů:
+
+\begin{center}
+	$\mathcal{L}(y, \gamma) = \norm{a - y}^2 + \gamma (\sum^{n}_{i=1} (\lambda_i y_i^2) - 1)$
+	
+	\vspace{.2cm}
+	
+	$\frac{\partial \mathcal{L}(y, \gamma)}{\partial y_i} = -2(a_i - y_i + \gamma \lambda_i y_i)$
+
+	\vspace{.2cm}
+
+	$\frac{\partial \mathcal{L}(y, \gamma)}{\partial \gamma} = \sum^{n}_{i=1}(\lambda_i y_i^2)-1$
+\end{center}
+
+Kde $\lambda$ jsou diagonální prvky matice $\Lambda$ a $a_i$ jsou prvky vektoru $a$, tedy bodu,
+ke kterému hledáme nejbližší bod na kvadrice.
+
+Jak již jsme si ověřili v přechozím pokusu Laplacian nejde minimalizovat analyticky,
+budeme ho tedy minimalizovat numericky - Newtonovo metodou.
+
+\end{document}
