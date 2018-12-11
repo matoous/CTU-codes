@@ -20,7 +20,15 @@ void process_expr(std::ostream &os, expr initial_expr, vector<Commands::Command>
                 os << e->evaluate(evaluate.variables) << std::endl;
             },
             [&](Commands::Print const &p) {
+                if(p.format == Commands::Print::Format::Infix) {
+                    os << fmt_expr{e, expr_base::WriteFormat ::Infix} << std::endl;
+                }else if(p.format == Commands::Print::Format::Prefix) {
+                    os << fmt_expr{e, expr_base::WriteFormat ::Prefix} << std::endl;
+                } else if(p.format == Commands::Print::Format::Postfix){
+                    os << fmt_expr{e, expr_base::WriteFormat ::Postfix} << std::endl;
+                } else {
                 os << e << std::endl;
+                }
             }
         );
     }

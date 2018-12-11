@@ -177,9 +177,6 @@ expr create_expression_tree(const std::string& expression) {
             throw e;
         }
     }
-    if(needs_parenthesis){
-        throw parse_error("missing parenthesis for function");
-    }
 
     return output.result();
 }
@@ -197,12 +194,12 @@ expr expr::variable(std::string name) {
 }
 
 std::ostream& operator<<(std::ostream &os, const expr &e) {
-    e->write(os, expr::WriteFormat::Infix);
+    e->write(os, expr::WriteFormat::Prefix);
     return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const fmt_expr &e) {
-    e.e->write(os, e.fmt);
+std::ostream &operator<<(std::ostream &os, const fmt_expr &fmt) {
+    fmt.e->write(os, fmt.fmt);
     return os;
 }
 

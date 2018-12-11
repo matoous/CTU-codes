@@ -29,7 +29,17 @@ namespace exprs {
     expr_plus::expr_plus(const expr &a, const expr &b) : one(a), two(b) {}
 
     void expr_plus::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(+ " << one << " " << two << ")";
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "(" << fmt_expr{one, fmt} << " + " << fmt_expr{two, fmt} << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << " +)";
+        } else {
+            out << "(+ " << fmt_expr{one, fmt} << " " << fmt_expr{two, fmt} << ")";
+        }
     }
 
     bool expr_plus::equals(const expr_base &b) const {
@@ -56,8 +66,25 @@ namespace exprs {
     }
 
     void expr_minus::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(- " << one << " " << two << ")";
-    }
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " - ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << " -)";
+        } else {
+            out << "(- ";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        }    }
 
     bool expr_minus::equals(const expr_base &b) const {
         if(const expr_minus* v = dynamic_cast<expr_minus const*>(b.shared_from_this().get())) {
@@ -96,8 +123,25 @@ namespace exprs {
     }
 
     void expr_multiply::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(* " << one << " " << two << ")";
-    }
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " * ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << " *)";
+        } else {
+            out << "(* ";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        }    }
 
     bool expr_multiply::equals(const expr_base &b) const {
         if(const expr_multiply* v = dynamic_cast<expr_multiply const*>(b.shared_from_this().get())) {
@@ -135,8 +179,25 @@ namespace exprs {
     }
 
     void expr_divide::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(/ " << one << " " << two << ")";
-    }
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " / ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << " /)";
+        } else {
+            out << "(/ ";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        }    }
 
     bool expr_divide::equals(const expr_base &b) const {
         if(const expr_divide* v = dynamic_cast<expr_divide const*>(b.shared_from_this().get())) {
@@ -178,8 +239,25 @@ namespace exprs {
     }
 
     void expr_pow::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(^ " << one << " " << two << ")";
-    }
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " ^ ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << " ^)";
+        } else {
+            out << "(^ ";
+            out << fmt_expr{one, fmt};
+            out << " ";
+            out << fmt_expr{two, fmt};
+            out << ")";
+        }    }
 
     bool expr_pow::equals(const expr_base &b) const {
         if(const expr_pow* v = dynamic_cast<expr_pow const*>(b.shared_from_this().get())) {
@@ -204,7 +282,19 @@ namespace exprs {
     }
 
     void expr_sin::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(sin " << one << ")";
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "sin(";
+            out << fmt_expr{one, fmt};
+            out << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " sin)";
+        } else {
+            out << "(sin ";
+            out << fmt_expr{one, fmt};
+            out << ")";
+        }
     }
 
     bool expr_sin::equals(const expr_base &b) const {
@@ -231,7 +321,19 @@ namespace exprs {
     }
 
     void expr_cos::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(cos " << one << ")";
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "cos(";
+            out << fmt_expr{one, fmt};
+            out << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " cos)";
+        } else {
+            out << "(cos ";
+            out << fmt_expr{one, fmt};
+            out << ")";
+        }
     }
 
     bool expr_cos::equals(const expr_base &b) const {
@@ -275,7 +377,19 @@ namespace exprs {
     expr_log::expr_log(const expr &a) : one(a) {};
 
     void expr_log::write(std::ostream &out, expr_base::WriteFormat fmt) const {
-        out << "(log " << one << ")";
+        if(fmt == expr_base::WriteFormat::Infix){
+            out << "log(";
+            out << fmt_expr{one, fmt};
+            out << ")";
+        } else if(fmt == expr_base::WriteFormat::Postfix){
+            out << "(";
+            out << fmt_expr{one, fmt};
+            out << " log)";
+        } else {
+            out << "(log ";
+            out << fmt_expr{one, fmt};
+            out << ")";
+        }
     }
 
     bool expr_log::equals(const expr_base &b) const {
