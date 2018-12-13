@@ -1,10 +1,10 @@
 % Assignment: The AdaBoost algorithm
 
 %% init
-%run('../../../../solutions/3rdparty/stprtool/stprpath.m')
+run('/home/matouus/statistical-pattern-recognition-toolbox-master/stprpath.m')
 
 % the positive class, the other digits will be used as negative samples
-digit = 0;
+digit = 9;
 
 %% load data
 load('data_33rpz_cv07.mat');
@@ -21,11 +21,11 @@ ytst(tst_data.labels == digit) = 1;
 
 %% run AdaBoost learning
 num_steps = 30;
-[strong_class wc_error upper_bound] = adaboost(Xtrn, ytrn, num_steps);
+[strong_class, wc_error, upper_bound] = adaboost(Xtrn, ytrn, num_steps);
 
 % compute the test error for all lengths of the strong classifier
-train_error = compute_error(strong_class, Xtrn, ytrn);
-test_error = compute_error(strong_class, Xtst, ytst);
+train_error = compute_error(strong_class, Xtrn, ytrn)
+test_error = compute_error(strong_class, Xtst, ytst)
 
 %% plot errors
 figure;

@@ -16,4 +16,16 @@ function errors = compute_error(strong_class, X, y)
 %       errors [1 x T] - error of the strong classifier for all lenghts 1:T
 %            of the strong classifier
 %
-
+N = size(X,2);
+M = size(strong_class.wc,2);
+errors = zeros(1,M);
+alphas = strong_class.alpha;
+wcs = strong_class.wc;
+for t = 1:length(strong_class.wc)
+    for i = 1:N
+        % individual classifications by weak classifiers
+        classif = arrayfun(@(j) alphas(j) * sign(wcs(j).parity * (X(wcs(j).idx,i) - wcs(j).theta)), 1:t);
+        errors(t) = errors(t) + (sign(sum(classif)) ~= y(i));
+    end
+    errors(t) = errors(t) / N;
+end
