@@ -6,6 +6,7 @@
 #include <iterator>
 #include <set>
 #include <iosfwd>
+#include <future>
 
 using std::size_t;
 
@@ -14,7 +15,7 @@ namespace pjc {
 
     class autocorrect {
     private:
-        std::set<std::string> dictionary;
+        std::vector<std::string> dictionary;
 
     public:
         autocorrect() = default;

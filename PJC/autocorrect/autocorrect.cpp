@@ -14,7 +14,7 @@ namespace pjc {
     pjc::autocorrect::autocorrect(std::istream& stream) {
         std::string word;
         while(stream >> word)
-            dictionary.insert(word);
+            dictionary.push_back(word);
     }
 
     size_t pjc::autocorrect::size() {
@@ -22,11 +22,11 @@ namespace pjc {
     }
 
     void autocorrect::add_word(std::string w) {
-        dictionary.insert(w);
+        dictionary.push_back(w);
     }
 
     void autocorrect::remove_word(std::string w) {
-        dictionary.erase(w);
+        return;
     }
 
     std::vector<std::string> autocorrect::correct(const std::string& word) {
@@ -74,13 +74,47 @@ namespace pjc {
         return corrections;
     }
 
+    std::vector<std::string> corrector(std::vector<std::string> dict, std::string word){
+        auto corrections = std::vector<std::string>(0);
+        auto bestDistance = word.length();
+        for(const auto& w : dict){
+            auto d = dist(word, w);
+            if(d < bestDistance){
+                if(d == 0) {
+                    corrections.clear();
+                    break;
+                }
+                bestDistance = d;
+                corrections.clear();
+                corrections.push_back(w);
+            }
+            else if(d == bestDistance){
+                corrections.push_back(w);
+            }
+        }
+        return corrections;
+    }
+
     std::vector<std::vector<std::string>> autocorrect::p_correct(const std::vector<std::string>& words) {
+        std::vector<std::future<std::vector<std::string>>> futures;
         std::vector<std::vector<std::string>> corrections(words.size());
-#pragma omp parallel for num_threads(4) shared(dictionary, words)
+
+        // NEW
+        for(const auto &word : words){
+            futures.push_back(std::async(std::launch::async, corrector, dictionary, word));
+        }
+        for(auto &e: futures){
+            corrections.push_back(e.get());
+        }
+        return corrections;
+
+
+        // OLD
         for(auto i = 0; i < words.size(); i++){
             const auto& word = words[i];
             auto bestDistance = word.length();
-            for(const auto& w : dictionary){
+            for(int u = 0; u < dictionary.size(); u++){
+                const auto& w = dictionary[u];
                 auto d = dist(word, w);
                 if(d < bestDistance){
                     if(d == 0) {
