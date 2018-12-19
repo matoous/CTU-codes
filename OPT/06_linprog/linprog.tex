@@ -1,0 +1,151 @@
+\documentclass[10pt,a4paper,openright]{article}
+\usepackage{amsfonts}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,verbatim}
+\textheight=240mm
+\textwidth=170mm
+\topmargin=-15mm
+\oddsidemargin=-6mm
+\evensidemargin=\oddsidemargin
+\newcommand\tab[1][1cm]{\hspace*{#1}}
+\usepackage{hyperref}
+\newcommand{\norm}[1]{\left\lVert#1\right\rVert}
+
+\begin{document}
+	\begin{flushleft}
+		\large Name: Matouš Dzivjak\\
+		\large Date: 20.12.2018\\
+	\end{flushleft}
+\begin{center}
+	\huge Lineární programování
+\end{center}
+\section{Zadání}
+\begin{verbatim}
+http://www.seas.ucla.edu/~vandenbe/ee236a/homework/problems.pdf#page=14&zoom=auto,-248,211
+\end{verbatim}
+
+
+\section{Řešení}
+
+\subsection{Úkol a}
+
+\textit{Definice úlohy LP, včetně přesné definice všech použitých proměnných (matic, vektorů). 
+Pro zjednodušení zápisu uvažujte případ s N=2 stavy.}
+\vspace{.4cm}
+
+Ze zadání máme stavy $x(t) \in \mathbb{R}^n, t = 0,...,N$, a signál
+$u(t) \in \mathbb{R}, t = 0,...,N-1$. Dynamický systém je pak definován jako:
+
+\begin{equation}
+    x(t+1)=Ax(t) + bu(t), t=0,...,N-1
+\end{equation}
+
+Kde $A \in \mathbb{R}^{n \times n}$ a $b \in \mathbb{R}^n$ jsou dány.
+Počátečním stavem je stav $x(0) = 0$. Optimalizační úlohou je zvolit 
+signály $u(0),...,u(N-1)$ tak, abychom minimalizovali spotřebované palivo.
+Což je dáno jako $F=\sum_{t=0}^{N-1}f(u(t))$ za podmínky $x(N)=x_{des}$.
+Kde funkce $f$, tedy spotřeba paliva, je definována jako:
+
+\begin{equation}\label{eq:fun}
+f(a) = \begin{cases} 
+    |a| & |a| \leq 1 \\
+    2|a|-1 & |a| > 1 \\
+ \end{cases}
+\end{equation}
+
+Definujeme úlohu lineárního programování pro $N=2$ (je mi pohodlnější to napsat obecně,
+na $N=2$ se můžeme omezit kdykoliv).
+
+\begin{equation}
+\min \sum_{t=0}^{N-1} f(u(t))
+\end{equation}
+
+Ze zadání víme, že platí:
+\begin{equation}
+	\begin{split}
+		&x(1) = Ax(0) + bu(0) = A0 + bu(0) = bu(0)\\
+		&x(2) = Ax(1) + bu(1) = Abu(0) + bu(1)\\
+		&x(3) = Ax(2) + bu(2) = A^2bu(0) + Abu(1) + bu(2)\\
+		&\vdots\\
+		&x(N) = A^{N-1}bu(0) + A^{N-2}bu(1) + \hdots + Abu(N-1) + bu(N) = x_{des}
+	\end{split}
+\end{equation}
+
+Kde $x(t)$ jsou hodnoty stavu v čase $t$ a $u(t)$ je signál v čase $t$. Z toho vytvoříme matici tak, abychom mohli optimální řešení zapsat jako násobek této matice
+spolu s vektorem signálů v jednotlivých časech, tedy:
+
+\begin{equation}\label{eq:defs}
+	\begin{split}
+	&C = \begin{bmatrix}A^{N-1}b & A^{N-2}b & \hdots & Ab & b \end{bmatrix}\\
+	&u = \begin{bmatrix}u(0) & u(1) & \hdots & u(N-1)\end{bmatrix}^T
+	\end{split}
+\end{equation}
+
+Dále musíme transformovat optimalizovanou funkci \ref{eq:fun}. 
+To uděláme následovně. Přidáme novou proměnnou $d$ a podmínky:
+
+\begin{equation}\label{eq:limits}
+	\begin{split}
+	&|a| \leq d\\
+	&2|a| - 1 \leq d
+	\end{split}
+\end{equation}
+
+To jsme mohli provést díky tomu, že na intervalu $[-1,1]$ je větší tedy $|a|$,
+zatím co na zbytku reálných čísel nabývá větší hodnoty $2|a| - 1$.
+Proměnná $d$ nám tedy vždy omezuje obě rovnosti, ale první "se omezí" funkce,
+která na daném intervalu odpovídá hodnotě předepsané funkcí $f$ a druhá bude nabývat hodnot nižších.
+
+Nerovnosti \ref{eq:limits} zbavíme absolutní hodnoty.
+
+
+\begin{equation}\label{eq:ineq}
+	\begin{split}
+	&-d \leq a \leq d\\
+	&-\frac{d+1}{2} \leq a \leq \frac{d+1}{2}
+	\end{split}
+\end{equation}
+
+Tyto nerovnosti musí platit pro každé $u(i)$ ($u(i)$ se stává při řešení optimalizační úlohy 
+argumentem funkce \ref{eq:fun}, tedy ho dosazujeme do těchto nerovností). Zavedeme tedy vektor
+$s$ (\textit{spotřeba}) $= \begin{bmatrix}s_0,\hdots,s_{N-1} \end{bmatrix}$,
+s jedním $s_i$ pro každý signál $u(i)$ a ten použijeme v nerovnostech. Nyní už můžeme
+definovat úlohu lineárního programování:
+
+\begin{equation}
+	\mathcal{LP} = 
+	\begin{cases}
+		\text{minimalizujeme} & 1^Ts\\
+		\text{za podmínek} & -s \leq u \leq s\\
+		& -\frac{s+1}{2} \leq u \leq \frac{s+1}{2}\\
+		& Cu = x_{des}
+	\end{cases}
+\end{equation}
+
+Kde:
+\begin{equation}
+	\begin{split}
+		N \in \mathbb{N} & \hdots \text{časový horizont pro splnění úlohy}\\
+		s \in \mathbb{R}^{N-1} & \hdots \text{spotřeba}\\
+		u \in \mathbb{R}^{N-1} & \hdots \text{signály v jednotlivých časových krocích}\\
+		C \in \mathbb{R}^{(N-1) \times n} & \hdots \text{matice z \ref{eq:defs}} \\
+		x_{des} \in \mathbb{R}^{n} & \hdots \text{cílový stav}
+	\end{split}
+\end{equation}
+
+Tedy přeloženo do slov: Minimalizujeme sumu spotřeby ($1^Ts$), 
+která nám omezuje signály (akce, které provádíme) v jednotlivých časových krocích (\ref{eq:ineq}) 
+tak, abychom v čase $N$, tedy v zadaném časovém horizontu byly v cílovém stavu $x_{des}$.
+
+
+\subsection{Úkol b}
+
+\textit{Graf obsahující závislost u(t), x1(t) a x2(t) na t. Optimální hodnotu spotřeby F.}
+\vspace{.4cm}
+
+
+\end{document}
