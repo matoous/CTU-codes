@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <random>
+#include <omp.h>
 
 size_t lines_in_file(const std::string& filename){
     size_t count = 0;
@@ -45,7 +46,7 @@ std::vector<std::string> generateWrongWords(std::string filename){
     // generate wrong words
     std::vector<std::string> misspelledWords;
     std::sample(dictionary.begin(), dictionary.end(), std::back_inserter(misspelledWords),
-                16, std::mt19937{std::random_device{}()});
+                16, std::mt19937_64{std::random_device{}()});
 
     const std::string alphabet = "abcdefghijklmnopqrstuvwxyz";
     for (auto &misspelledWord : misspelledWords) {

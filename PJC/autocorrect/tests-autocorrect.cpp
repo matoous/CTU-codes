@@ -24,14 +24,10 @@ TEST_CASE("Levahnstein distance implementation"){
     SECTION("order doesn't matter when calculating levahnstein distance"){
         REQUIRE(pjc::dist("broccoli", "brooli") == pjc::dist("brooli", "broccoli"));
     }
-
-//    SECTION("levahnstein distance can handle UTF-8 characters as well"){
-//        REQUIRE(pjc::dist("čaj", "caj") == 1);
-//    }
 }
 
 
-TEST_CASE("Base methods of autocorrect work", "[stage1]") {
+TEST_CASE("Base methods of autocorrect work") {
     autocorrect ac;
     REQUIRE(ac.size() == 0);
 
@@ -59,7 +55,7 @@ TEST_CASE("Base methods of autocorrect work", "[stage1]") {
     }
 }
 
-TEST_CASE("Correction of word works", "[stage2]") {
+TEST_CASE("Correction of word works") {
     autocorrect ac;
     ac.add_word("one");
     ac.add_word("two");
@@ -76,15 +72,15 @@ TEST_CASE("Correction of word works", "[stage2]") {
     }
 }
 
-TEST_CASE("Autocorrect can be constructed from file of words", "[stage3]") {
+TEST_CASE("Autocorrect can be constructed from file of words") {
     std::fstream myfile;
-    myfile.open("/home/matouus/code/CTU-codes/PJC/autocorrect/words.txt");
+    myfile.open("words.txt");
     REQUIRE(myfile.is_open());
     autocorrect ac(myfile);
     myfile.close();
 
     SECTION("autocorrect loaded dictionary file correctly") {
-        REQUIRE(ac.size() == lines_in_file("/home/matouus/code/CTU-codes/PJC/autocorrect/words.txt"));
+        REQUIRE(ac.size() == lines_in_file("words.txt"));
     }
 
     SECTION("autocorrecy corrects some common english words") {
@@ -102,9 +98,9 @@ TEST_CASE("Autocorrect can be constructed from file of words", "[stage3]") {
     }
 }
 
-TEST_CASE("Autocorrect more words in one call", "[stage4]") {
+TEST_CASE("Autocorrect more words in one call") {
     std::fstream myfile;
-    myfile.open("/home/matouus/code/CTU-codes/PJC/autocorrect/words.txt");
+    myfile.open("words.txt");
     REQUIRE(myfile.is_open());
     autocorrect ac(myfile);
     myfile.close();
@@ -127,9 +123,9 @@ TEST_CASE("Autocorrect more words in one call", "[stage4]") {
     REQUIRE(vector_contains(corrections[2], "thunderbolt"));
 }
 
-TEST_CASE("Autocorrect parallel correction implementation", "[stage5]") {
+TEST_CASE("Autocorrect parallel correction implementation") {
     std::fstream myfile;
-    myfile.open("/home/matouus/code/CTU-codes/PJC/autocorrect/words.txt");
+    myfile.open("words.txt");
     REQUIRE(myfile.is_open());
     autocorrect ac(myfile);
     myfile.close();

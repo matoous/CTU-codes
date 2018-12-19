@@ -5,21 +5,26 @@
 #include <vector>
 #include <iterator>
 #include <set>
-#include <iosfwd>
-#include <future>
+#include <omp.h>
 
 using std::size_t;
 
 namespace pjc {
+    // compute Levenshtein distance of two words
     const size_t dist(const std::string &, const std::string &);
 
     class autocorrect {
     private:
-        std::vector<std::string> dictionary;
+        std::set<std::string> dictionary;
 
     public:
         autocorrect() = default;
+
+        // initialize the autocorrect with dictionary of words from file
         explicit autocorrect(std::istream&);
+
+        // initialize the autocorrect with dictionary of words provided as vector if strings
+        explicit autocorrect(std::vector<std::string>&);
 
         size_t size();
         void add_word(std::string w);
@@ -28,9 +33,6 @@ namespace pjc {
         std::vector<std::string> correct(const std::string&);
         std::vector<std::vector<std::string>> correct(const std::vector<std::string>&);
         std::vector<std::vector<std::string>> p_correct(const std::vector<std::string>&);
-
-        std::vector<std::string> suggest(std::string word);
-        std::vector<std::string> suggest(std::string word, int n);
     };
 }
 

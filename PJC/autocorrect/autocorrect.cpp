@@ -10,11 +10,10 @@
 #include <iostream>
 
 namespace pjc {
-
     pjc::autocorrect::autocorrect(std::istream& stream) {
         std::string word;
         while(stream >> word)
-            dictionary.push_back(word);
+            dictionary.insert(word);
     }
 
     size_t pjc::autocorrect::size() {
@@ -22,11 +21,11 @@ namespace pjc {
     }
 
     void autocorrect::add_word(std::string w) {
-        dictionary.push_back(w);
+        dictionary.insert(w);
     }
 
     void autocorrect::remove_word(std::string w) {
-        return;
+        dictionary.erase(w);
     }
 
     std::vector<std::string> autocorrect::correct(const std::string& word) {
@@ -74,7 +73,7 @@ namespace pjc {
         return corrections;
     }
 
-    std::vector<std::string> corrector(std::vector<std::string> dict, std::string word){
+    std::vector<std::string> corrector(std::vector<std::string> dict, const std::string &word){
         auto corrections = std::vector<std::string>(0);
         auto bestDistance = word.length();
         for(const auto& w : dict){
@@ -96,25 +95,12 @@ namespace pjc {
     }
 
     std::vector<std::vector<std::string>> autocorrect::p_correct(const std::vector<std::string>& words) {
-        std::vector<std::future<std::vector<std::string>>> futures;
         std::vector<std::vector<std::string>> corrections(words.size());
-
-        // NEW
-        for(const auto &word : words){
-            futures.push_back(std::async(std::launch::async, corrector, dictionary, word));
-        }
-        for(auto &e: futures){
-            corrections.push_back(e.get());
-        }
-        return corrections;
-
-
-        // OLD
+#pragma omp parallel for
         for(auto i = 0; i < words.size(); i++){
             const auto& word = words[i];
             auto bestDistance = word.length();
-            for(int u = 0; u < dictionary.size(); u++){
-                const auto& w = dictionary[u];
+            for(const auto& w : dictionary){
                 auto d = dist(word, w);
                 if(d < bestDistance){
                     if(d == 0) {
@@ -133,15 +119,9 @@ namespace pjc {
         return corrections;
     }
 
-    std::vector<std::string> autocorrect::suggest(std::string word, int n) {
-        auto l = std::vector<std::pair<int, std::string>>(0);
-
-        auto res = std::vector<std::string>();
-        return res;
-    }
-
-    std::vector<std::string> autocorrect::suggest(std::string word) {
-        return autocorrect::suggest(std::move(word), 10);
+    autocorrect::autocorrect(std::vector<std::string> &words) {
+        for(auto const& w: words)
+            dictionary.insert(w);
     }
 
     const size_t dist(const std::string &s1, const std::string &s2)

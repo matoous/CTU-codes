@@ -8,12 +8,13 @@
 
 using namespace pjc;
 
-auto wrongWords = generateWrongWords("/home/matouus/code/CTU-codes/PJC/autocorrect/words.txt");
+auto wrongWords = generateWrongWords("words.txt");
+
 
 static void serial_correct(picobench::state& s)
 {
     std::fstream myfile;
-    myfile.open("/home/matouus/code/CTU-codes/PJC/autocorrect/words.txt");
+    myfile.open("words.txt");
     autocorrect ac(myfile);
     myfile.close();
 
@@ -27,7 +28,7 @@ PICOBENCH(serial_correct).iterations({1,2,4}).baseline(true);
 static void parallel_correct(picobench::state& s)
 {
     std::fstream myfile;
-    myfile.open("/home/matouus/code/CTU-codes/PJC/autocorrect/words.txt");
+    myfile.open("words.txt");
     autocorrect ac(myfile);
     myfile.close();
 
