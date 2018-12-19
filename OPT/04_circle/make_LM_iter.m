@@ -18,17 +18,14 @@ function [x_new, success] = make_LM_iter(x, a, mu)
 % x_new is set equal to the input x if success == 0. 
     
 % discard the code from here and implement the functionality: 
+% x_new is the updated x. 
 N = length(a);
-syms('x0', 'y0', 'r') 
+jacobi = zeros(N,3);
 for i = 1:N
-    g(i,1) = sqrt((x0-a(1,i))^2 + (y0-a(2,i))^2) - r;
-    jacobi_eq(i,:) = jacobian(g(i,1), [x0, y0, r]);
+    g(i,1) = sqrt((x(1)-a(1,i))^2 + (x(2)-a(2,i))^2) - x(3);
+    jacobi(i,:) = [(2*x(1) - a(1,i))/(2*((x(1) - a(1,i))^2 + (x(2) - a(2,i))^2)^(1/2)), (2*x(2) - a(2,i))/(2*((x(1) - a(1,i))^2 + (x(2) - a(2,i))^2)^(1/2)), -1];
 end
-x0 = x(1);
-y0 = x(2);
-r = x(3);
-jacobi = eval(jacobi_eq);
-x_new = x - inv(jacobi'*jacobi + mu*eye(length(x)))*jacobi'*eval(g);
+x_new = x - inv(jacobi'*jacobi + mu*eye(length(x)))*jacobi'*g;
 new_crit = compute_criterion(x_new, a);
 old_crit = compute_criterion(x, a);
 if new_crit < old_crit
