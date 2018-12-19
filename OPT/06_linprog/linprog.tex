@@ -37,7 +37,7 @@ http://www.seas.ucla.edu/~vandenbe/ee236a/homework/problems.pdf#page=14&zoom=aut
 Pro zjednodušení zápisu uvažujte případ s N=2 stavy.}
 \vspace{.4cm}
 
-Ze zadání máme stavy $x(t) \in \mathbb{R}^n, t = 0,...,N$, a signál
+Ze zadání máme stavy $x(t) \in \mathbb{R}^n, t = 0,...,N$, a signály (akce)
 $u(t) \in \mathbb{R}, t = 0,...,N-1$. Dynamický systém je pak definován jako:
 
 \begin{equation}
@@ -45,10 +45,14 @@ $u(t) \in \mathbb{R}, t = 0,...,N-1$. Dynamický systém je pak definován jako:
 \end{equation}
 
 Kde $A \in \mathbb{R}^{n \times n}$ a $b \in \mathbb{R}^n$ jsou dány.
-Počátečním stavem je stav $x(0) = 0$. Optimalizační úlohou je zvolit 
+Počátečním stavem je stav $x(0) = 0$. 
+
+Optimalizační úlohou minimílní spotřeby paliva (\textit{minimum fuel optimal control problem}) je zvolit 
 signály $u(0),...,u(N-1)$ tak, abychom minimalizovali spotřebované palivo.
 Což je dáno jako $F=\sum_{t=0}^{N-1}f(u(t))$ za podmínky $x(N)=x_{des}$.
-Kde funkce $f$, tedy spotřeba paliva, je definována jako:
+Kde funkce $f: \mathbb{R} \to \mathbb{R}$ je mapa využití paliva pro signál (akci), 
+tedy funkce, která vrací množství spotřebovaného paliva v závislosti na velikosti
+signálu (akce). V této úloze je definována jako:
 
 \begin{equation}\label{eq:fun}
 f(a) = \begin{cases} 
@@ -57,8 +61,8 @@ f(a) = \begin{cases}
  \end{cases}
 \end{equation}
 
-Definujeme úlohu lineárního programování pro $N=2$ (je mi pohodlnější to napsat obecně,
-na $N=2$ se můžeme omezit kdykoliv).
+Definujeme úlohu lineárního programování (ze zadání pro $N=2$, nicméně je mi pohodlnější to napsat obecně,
+a na $N=2$ se můžeme omezit kdykoliv). Optimalizujeme úlohu:
 
 \begin{equation}
 \min \sum_{t=0}^{N-1} f(u(t))
@@ -95,10 +99,10 @@ To uděláme následovně. Přidáme novou proměnnou $d$ a podmínky:
 	\end{split}
 \end{equation}
 
-To jsme mohli provést díky tomu, že na intervalu $[-1,1]$ je větší tedy $|a|$,
+To jsme mohli provést díky tomu, že na intervalu $[-1,1]$ je větší $|a|$,
 zatím co na zbytku reálných čísel nabývá větší hodnoty $2|a| - 1$.
 Proměnná $d$ nám tedy vždy omezuje obě rovnosti, ale první "se omezí" funkce,
-která na daném intervalu odpovídá hodnotě předepsané funkcí $f$ a druhá bude nabývat hodnot nižších.
+která na daném intervalu odpovídá hodnotě předepsané funkcí $f$ a druhá bude nabývat hodnot nižší.
 
 Nerovnosti \ref{eq:limits} zbavíme absolutní hodnoty.
 
@@ -113,7 +117,7 @@ Nerovnosti \ref{eq:limits} zbavíme absolutní hodnoty.
 Tyto nerovnosti musí platit pro každé $u(i)$ ($u(i)$ se stává při řešení optimalizační úlohy 
 argumentem funkce \ref{eq:fun}, tedy ho dosazujeme do těchto nerovností). Zavedeme tedy vektor
 $s$ (\textit{spotřeba}) $= \begin{bmatrix}s_0,\hdots,s_{N-1} \end{bmatrix}$,
-s jedním $s_i$ pro každý signál $u(i)$ a ten použijeme v nerovnostech. Nyní už můžeme
+s jedním $s_i$ pro každý signál (akci) $u(i)$ a ten použijeme v nerovnostech. Nyní už můžeme
 definovat úlohu lineárního programování:
 
 \begin{equation}
@@ -132,7 +136,7 @@ Kde:
 		N \in \mathbb{N} & \hdots \text{časový horizont pro splnění úlohy}\\
 		s \in \mathbb{R}^{N-1} & \hdots \text{spotřeba}\\
 		u \in \mathbb{R}^{N-1} & \hdots \text{signály v jednotlivých časových krocích}\\
-		C \in \mathbb{R}^{(N-1) \times n} & \hdots \text{matice z \ref{eq:defs}} \\
+		C \in \mathbb{R}^{(N-1) \times n} & \hdots \text{matice \ref{eq:defs}} \\
 		x_{des} \in \mathbb{R}^{n} & \hdots \text{cílový stav}
 	\end{split}
 \end{equation}
@@ -144,7 +148,7 @@ tak, abychom v čase $N$, tedy v zadaném časovém horizontu byly v cílovém s
 
 \subsection{Úkol b}
 
-\textit{Graf obsahující závislost u(t), x1(t) a x2(t) na t. Optimální hodnotu spotřeby F.}
+\textit{Graf obsahující závislost $u(t)$, $x_1(t)$ a $x_2(t)$ na $t$. Optimální hodnotu spotřeby F.}
 \vspace{.4cm}
 
 
