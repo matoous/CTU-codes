@@ -12,7 +12,7 @@ add_executable(tests-basic
     catch.hpp
     tests-helpers.cpp
     tests-helpers.hpp
-)
+        )
 
 add_executable(tests-full
     flatset.hpp
@@ -22,7 +22,7 @@ add_executable(tests-full
     catch.hpp
     tests-helpers.cpp
     tests-helpers.hpp
-)
+        )
 
 
 if ( CMAKE_CXX_COMPILER_ID MATCHES "Clang|AppleClang|GNU" )
