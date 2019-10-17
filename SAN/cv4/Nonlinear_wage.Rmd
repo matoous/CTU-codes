@@ -1,0 +1,244 @@
+---
+title: "Moving beyond linearity"
+output:
+  html_document:
+    df_print: paged
+---
+
+This notebook demonstrates that many of the complex non-linear fitting procedures shown in the lecture can be easily implemented in R. The notebook deals with the same dataset that illustrates the accompanying lecture on non-linear regression, the Wage dataset. The notebook directly stems from ISLR's Chapter 7 Lab: Non-linear Modeling.
+
+```{r prepare, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(ISLR)
+library(splines)
+library(gam)
+library(akima)
+attach(Wage) # since now, it is possible to refer to the variables in the Wage data frame by their names alone, without the prefix Wage$
+
+# root mean squared error function for later evaluation
+myRMSE = function(m, o){
+  sqrt(mean((m - o)^2))
+}
+```
+
+## Get familiar with the Wage dataset
+```{r}
+help(Wage) # Wage and other data for a group of 3000 male workers in the Mid-Atlantic region
+summary(Wage) # learn the structure of the dataset
+plot(age,wage) # remember a few relationships/plots from the lecture
+plot(education,wage)
+```
+
+## Polynomial regression
+
+We will model the relationship between age and wage. The plot above suggests that the relationship is not linear. We will start with polynomial regression. We will introduce additional exponential terms into the regression formula, the degree of the polynomial is not known, we will work with the degree of 4. Higher degrees are rarely used as the polynomial curve may become overly flexible. All the models below are identical in terms of their predictions, i.e., the fitted values obtained in either case are identical.
+
+```{r}
+fit=lm(wage~poly(age,4),data=Wage) # learn the 4th degree polynomial age model with orthogonal polynomials
+coef(summary(fit)) # show the model coefs
+fit2=lm(wage~poly(age,4,raw=T),data=Wage) # learn the 4th degree polynomial age model with raw polynomials
+coef(summary(fit2)) # the coefs and p-values change, later we will see it does not affect the fitted values
+fit2a=lm(wage~age+I(age^2)+I(age^3)+I(age^4),data=Wage) # explicitly calculate the exponential terms, I inhibits the interretation of ^ as a formula crossing/interaction operator, it would make no effect with the only variable age  
+coef(fit2a) # no change from fit2
+fit2b=lm(wage~cbind(age,age^2,age^3,age^4),data=Wage) # explicitly calculate the exponential terms, store them into a data.frame
+coef(fit2b) # no change from fit2 nor fit2a
+
+agelims=range(age) # compare all the models created above, create a regular grid of ages to test
+age.grid=seq(from=agelims[1],to=agelims[2])
+preds=predict(fit,newdata=list(age=age.grid),se=TRUE) # use the orthogonal polynomial model first
+se.bands=cbind(preds$fit+2*preds$se.fit,preds$fit-2*preds$se.fit) # construct 95% confidence intervals
+par(mfrow=c(1,2),mar=c(4.5,4.5,1,1),oma=c(0,0,4,0))
+plot(age,wage,xlim=agelims,cex=.5,col="darkgrey")
+title("Degree-4 Polynomial",outer=T)
+lines(age.grid,preds$fit,lwd=2,col="blue")
+matlines(age.grid,se.bands,lwd=1,col="blue",lty=3)
+preds2=predict(fit2,newdata=list(age=age.grid),se=TRUE) # compare with the second fit (we have already found out that 2b and 2c must be identical)
+max(abs(preds$fit-preds2$fit)) # there is nearly no difference between the predictions
+se2.bands=cbind(preds2$fit+2*preds2$se.fit,preds2$fit-2*preds2$se.fit) # construct 95% confidence intervals
+plot(age,wage,xlim=agelims,cex=.5,col="darkgrey")
+lines(age.grid,preds2$fit,lwd=2,col="blue")
+matlines(age.grid,se2.bands,lwd=1,col="blue",lty=3)
+```
+Now, we will employ hypothesis testing to decide the optimal degree of the polynomial. We will fit models ranging from linear to a degree-5 polynomial and seek to determine the simplest model that cannot be overcome with a higher degree model.
+
+```{r}
+fit.1=lm(wage~age,data=Wage)
+fit.2=lm(wage~poly(age,2),data=Wage)
+fit.3=lm(wage~poly(age,3),data=Wage)
+fit.4=lm(wage~poly(age,4),data=Wage)
+fit.5=lm(wage~poly(age,5),data=Wage)
+anova(fit.1,fit.2,fit.3,fit.4,fit.5)
+coef(summary(fit.5))
+(-11.983)^2 # show that the square of the t-stat for the quadratic model equals the F-stat for the quadratic model taken from ANOVA
+```
+
+The models must be nested (the set of predictors of a previous model has to be a subset of predictors in its successor model). ANOVA performs a sequence of F-tests, they always compare the simpler model to the more complex model that follows it. The first p-value (<2.2e-16) indicates that a linear fit is not sufficient. The quadratic model seems to be insuficient too (p-value 0.0017). The subsequent p-value is around 0.05 and the last one is large. Consequently, either a cubic or a quadratic polynomial appear to reasonably fit the data.
+
+Eventually, notice one of the advantages of orthogonal polynomials. Instead of using the anova() function we could heave obtained the same result directly from the degree-5 model. The p-values there match the ANOVA p-values, the square of t-statistics are equal to ANOVA F-statistics.
+
+In general, the age predictor will be used in combination with other predictors. Let us see the performance of the model that employs education too.
+
+```{r}
+fit.1=lm(wage~education+age,data=Wage)
+fit.2=lm(wage~education+poly(age,2),data=Wage)
+fit.3=lm(wage~education+poly(age,3),data=Wage)
+anova(fit.1,fit.2,fit.3)
+```
+The conclusion is simple, the cubic age model overcomes the linear and quadratic ones.
+
+## Step functions
+
+Step functions allow for locally constant approximation of the dependent variable. The range of age is broken into bins, a different constant is used in each bin. The cut function does the job here, an ordered catagorical variable originates. We propose to split into 4 different bins. The range of the age variable is divided into bins of equal length independently of its actual distribution, the split may miss the actual breakpoints.
+```{r}
+table(cut(age,4))
+fit=lm(wage~cut(age,4),data=Wage)
+coef(summary(fit))
+preds=predict(fit,newdata=list(age=age.grid),se=TRUE) # make predictions on the same regular age grid we used for polynomial models
+se.bands=cbind(preds$fit+2*preds$se.fit,preds$fit-2*preds$se.fit) # construct 95% confidence intervals
+plot(age,wage,xlim=agelims,cex=.5,col="darkgrey",main="Step regression")
+lines(age.grid,preds$fit,lwd=2,col="darkgreen")
+matlines(age.grid,se.bands,lwd=1,col="darkgreen",lty=3)
+
+```
+
+The intercept corresponds to the average wage in the leftmost bin. The other coefficients represent the average additional wage in the corresponding bin. The p-values show that while the intermediate age bins have different wages than the leftmost bin, the rightmost bin coefficient could stand for insignificant change.
+
+## Splines
+
+Let us model the relationship between age and wage with regression splines. The bs() function generates the entire matrix of basis functions for splines with the predefined set of knots. By default, cubic splines are produced. Here, we will specify knots at ages 25, 40 and 60. This produces a spline with 6 basis functions and 7 degrees of freedom (an intercept + 6 splines). Eventually, a natural spline with 4 degrees of freedom is added. Notice its smaller variance at the outer range of the age predictor. 
+
+
+```{r}
+fit=lm(wage~bs(age,knots=c(25,40,60)),data=Wage) # fit the regression spline model
+pred=predict(fit,newdata=list(age=age.grid),se=T) # make predictions on the same regular age grid we used for polynomial models
+plot(age,wage,col="gray",main="Cubic regression splines with 3 knots") # show the prediction plot
+lines(age.grid,pred$fit,lwd=2,col="blue")
+lines(age.grid,pred$fit+2*pred$se,lty="dashed",col="blue")
+lines(age.grid,pred$fit-2*pred$se,lty="dashed",col="blue")
+dim(bs(age,knots=c(25,40,60))) # 6 splines produced
+dim(bs(age,df=6)) # alternative definition, 6 splines again. knots at uniform quantiles of age
+attr(bs(age,df=6),"knots") # show the knots, taken at uniform quantiles (25th, 50th, 75th), their number derived from df
+fit2=lm(wage~ns(age,df=4),data=Wage)
+pred2=predict(fit2,newdata=list(age=age.grid),se=T)
+lines(age.grid, pred2$fit,col="red",lwd=2)
+lines(age.grid,pred2$fit+2*pred2$se,lty="dashed",col="red")
+lines(age.grid,pred2$fit-2*pred2$se,lty="dashed",col="red")
+legend("topright",legend=c("Cubic spline","Natural cubic spline"),col=c("blue","red"),lty=1,lwd=2,cex=.8)
+```
+
+Here we fit other spline types. A smoothing spline is derived first. Then, we apply local regression.
+
+```{r}
+plot(age,wage,xlim=agelims,cex=.5,col="darkgrey", main="Smoothing Spline")
+fit=smooth.spline(age,wage,df=16) # a user pre-defined dfs
+fit2=smooth.spline(age,wage,cv=TRUE) # the optimal df number found with CV
+fit2$df # the number of dfs found with CV
+lines(fit,col="red",lwd=2)
+lines(fit2,col="blue",lwd=2)
+legend("topright",legend=c("16 DF","6.8 DF"),col=c("red","blue"),lty=1,lwd=2,cex=.8)
+plot(age,wage,xlim=agelims,cex=.5,col="darkgrey",main="Local Regression")
+fit=loess(wage~age,span=.2,data=Wage) # local regression where each neighborhood consists of 20% of the observations
+fit2=loess(wage~age,span=.5,data=Wage) # local regression where each neighborhood consists of 50% of the observations
+lines(age.grid,predict(fit,data.frame(age=age.grid)),col="red",lwd=2)
+lines(age.grid,predict(fit2,data.frame(age=age.grid)),col="blue",lwd=2)
+legend("topright",legend=c("Span=0.2","Span=0.5"),col=c("red","blue"),lty=1,lwd=2,cex=.8)
+```
+
+## GAMs
+
+The ultimate task is to propose a multivariate model that employs all the relevant predictors with an appropriate choice of their non-linear basis. When dealing with precomputed basis functions (bs,ns), we can simply combine them using the lm() function and the least square method. However, neither smoothing splines nor local regression deals with basis functions, gam library has to be used to employ them into a big regression model.
+
+```{r}
+gam1=lm(wage~ns(year,4)+ns(age,5)+education,data=Wage) # simple linear model when using bs() and ns()
+gam.m3=gam(wage~s(year,4)+s(age,5)+education,data=Wage) # gam must be used to compile smoothing splines and/or local regression
+par(mfrow=c(1,3))
+plot(gam.m3, se=TRUE,col="blue") # show the gam model that uses smoothing splines (education is categorical and converted into dummy vars), demonstrate the individual components of the model
+plot.Gam(gam1, col="red") # do the same plot for the natural spline model
+gam.m1=gam(wage~s(age,5)+education,data=Wage) # try various year treatments, this is the model that ignores year
+gam.m2=gam(wage~year+s(age,5)+education,data=Wage) # try various year treatments, this is the model that uses a linear function of year
+anova(gam.m1,gam.m2,gam.m3,test="F") # compare the models, the linear year model works the best, m2 is preferred
+summary(gam.m3) # a summary of the gam fit, p-values for year and age correspond to a H0 of a linear relationship versus Ha of a non-linear relationship, a linear function is sufficient for year, however, a non-linear term is requirred for age 
+preds=predict(gam.m2,newdata=Wage) # make prediction from gam object
+gam.lo=gam(wage~s(year,df=4)+lo(age,span=0.7)+education,data=Wage) # learn a gam with local regression building blocks
+plot(gam.lo, se=TRUE, col="green")
+gam.lo.i=gam(wage~lo(year,age,span=0.5)+education,data=Wage) # allow for interactions between year and age in local regression
+plot(gam.lo.i) # plot the resulting two=dimensional surface, akima library is needed here
+```
+
+## Other questions to answer (homework)
+
+Have a look at other predictors. What treatment would you recommend for them?
+Which non-linear model would you recommend for wage prediction (considering all the predictors)?
+How would you decide the previous questions with cross-validation?
+
+## A task to solve independently
+
+Let us work with a noisy trigonometric function. It is obvious that it is non linear. Explain how far the linear model works and propose a suitable alternative model. 
+
+```{r}
+x <- seq(0, pi * 2, 0.1)
+y <- sin(x) + rnorm(n = length(x), mean = 0, sd = sd(sin(x) / 2))
+sin.data <- data.frame(y,x)
+plot(sin.data$x,sin.data$y)
+lines(sin.data$x,sin(sin.data$x),col="green")
+```
+
+How far the linear model works?
+```{r}
+lm.sin <- lm(y ~ x, data = sin.data) # learn the linear model
+x.pred <- seq(0.05,pi*2,0.1) # create a test dataset, interpolation only
+lm.sin.pred <- predict(lm.sin, data.frame(x.pred), interval="confidence") # make predictions at testing points
+summary(lm.sin) # the model works somehow, explains 40% of the variance, much better than averaging
+plot(sin.data$x,sin.data$y)
+abline(lm.sin,col="red")
+
+lines(x.pred,lm.sin.pred[,"lwr"],col="blue",lty=2)
+lines(x.pred,lm.sin.pred[,"upr"],col="blue",lty=2)
+plot(lm.sin,which=1) # however, the assumptions violated, unreliable confidence intervals, the model underfits the data
+```
+Demonstrate the application of simple splines
+```{r}
+gam.lin<-gam(y~x,data=sin.data) # simple gam, matches lm
+summary(gam.lin)
+coefficients(gam.lin) # the same as in lm.sin
+plot(sin.data$x,sin.data$y)
+abline(gam.lin,col="red")
+gam.quad<-gam(y~bs(x,degree=2,knots=c(3)),data=sin.data) # gam with a quadratic spline with one knot
+summary(gam.quad)
+coefficients(gam.quad)
+gam.quad.pred <- predict(gam.quad, data.frame(x.pred),se.fit=T) # make predictions at testing points
+plot(sin.data$x,sin.data$y) # plot the original data
+lines(x.pred,sin(x.pred),col="green") # plot the true model
+lines(x.pred,gam.quad.pred$fit,col="blue")
+gam.cub<-gam(y~bs(x,degree=3,knots=c(3)),data=sin.data) # increase the degree, cubic spline with one knot
+lines(x.pred,predict(gam.cub,data.frame(x.pred)),col="red")
+gam.overfit<-gam(y~bs(x,degree=10,knots=quantile(x.pred,c(0.25,0.5,0.75))),data=sin.data) # overfit the data
+lines(x.pred,predict(gam.overfit,data.frame(x.pred)),col="orange")
+
+```
+
+How well does it compare with smoothing splines?
+```{r}
+gam.smooth<-gam(y~s(x),data=sin.data) # gam with a smoothing spline, the default flexibility is df=4 (df=1 corresponds to linear fit)
+summary(gam.smooth)
+coefficients(gam.smooth)
+gam.smooth.pred <- predict(gam.smooth, se.fit=T) # make predictions at testing points
+plot(sin.data$x,sin.data$y) # plot the smoothing spline
+lines(sin.data$x,gam.smooth.pred$fit,col="blue")
+lines(sin.data$x,gam.smooth.pred$fit+2*gam.smooth.pred$se.fit[,1],col="blue",lty=2)
+lines(sin.data$x,gam.smooth.pred$fit-2*gam.smooth.pred$se.fit[,1],col="blue",lty=2)
+# the above plot suggests that the smoothing spline has about the right flexibility, however learn the best df value with CV
+smooth.spline(sin.data$x, sin.data$y, cv = TRUE) # the best df seems to be a bit larger
+```
+Compute the testing errors for the individual models.
+
+The linear model: `r myRMSE(sin(x.pred),predict(gam.lin,data.frame(x.pred)))`
+
+The quadratic spline model: `r myRMSE(sin(x.pred),predict(gam.quad,data.frame(x.pred)))`
+
+The cubic spline model: `r myRMSE(sin(x.pred),predict(gam.cub,data.frame(x.pred)))`
+
+The overfitted spline model: `r myRMSE(sin(x.pred),predict(gam.overfit,data.frame(x.pred)))`
+
+The smoothing spline model: `r myRMSE(sin(x.pred),predict(gam.smooth,data.frame(x.pred)))`
+
+The irreducible error: `r myRMSE(sin(sin.data$x),sin.data$y)`. It cannot be directly compared with the errors above as it is computed from the noisy data while the above errors compare with the true sin function. 

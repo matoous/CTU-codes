@@ -1,0 +1,106 @@
+---
+title: "The role of irrelevant variables in linear models"
+output:
+  html_document:
+    df_print: paged
+---
+
+This notebook demonstrates overfitting and importance to remove irrelevant variables from a statistical model.
+
+```{r prepare, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(cvTools)
+
+# root mean squared error function for later evaluation
+myRMSE = function(m, o){
+  sqrt(mean((m - o)^2))
+}
+```
+
+## Artificial data
+
+We will generate artificial data first. The dataset contains 100 independent variables and one dependent variable, all continuous. Notice that there is **no relationship between dependent and independent variables**. Consequently, all further findings must be false positives (Type I error).
+
+```{r}
+d<-data.frame(matrix(rnorm(200*100,0,1),nrow=200))
+d$out<-rnorm(200,0,1)
+```
+
+## Learn a linear model
+
+Next, we will create a linear regression model. There is no feature selection in this step. Check the number of seemingly relevant independent variables, their number should be around alpha*nvars=5. You may need to generate data multiple times to get an "illustrative" case.
+
+```{r}
+lm.all<-lm(out ~ .,data=d)
+lm.all.par<-coefficients(summary(lm.all))
+sum(lm.all.par[,"Pr(>|t|)"]<0.05)
+summary(lm.all) # print out the number of significant independent variables
+```
+
+## See the best predictor
+
+Let us pick the best predictor/independent variable and visualise its relationship with the dependent variable. Both correlation and visual fit look significant, still, it is a false positive due to **selection bias**.
+
+```{r}
+pred<-rownames(lm.all.par)[which(lm.all.par[,"Pr(>|t|)"]==min(lm.all.par[,"Pr(>|t|)"]))]
+cor.test(d[[pred]],d$out)
+plot(d[[pred]], d$out,xlab=pred,ylab="out") # visualize the relationship between indep and dep variable
+abline(lm(as.formula(paste("out~",pred)), d),col="red", lw=2) # visualize the fit
+```
+
+## Alternative regression models
+
+There are four alternative linear models to consider:
+1. lm.all ... the full model, use all 100 independent variables,
+2. lm.sel ... use only the (seemingly) relevant variables,
+3. lm.simple ... use only the intercept,
+4. lm.zero ... always predict zero.
+
+Knowing the origin of data, it is obvious that it holds lm.all<lm.sel<lm.simple<lm.zero. The best prediction is to always predict zero. The other linear models will be constructed as follows:
+
+```{r}
+sel.form<-as.formula(paste("out~",paste(rownames(lm.all.par)[lm.all.par[,"Pr(>|t|)"]<0.05],collapse="+")))
+lm.sel<- lm(sel.form, data=d) # obviously, it is better to employ lasso or stepwise regression, this is just to illustrate
+lm.simple<-lm(out ~ 1,data=d)
+lm.zero<-lm(out ~ 0,data=d)
+```
+
+## Compare the alternative models, find the best one
+
+Let us suppose the common situation of not knowing the true relationships among variables. The goal is to find the best model, i.e., the model that represents a trade-off between sufficient flexibility and minimal overfitting. In this case, we deal with artificial data and we can always get a previously unseen test samples. **The holdout method** makes the simplest testing choice here:
+
+```{r}
+d_test<-data.frame(matrix(rnorm(1000*100,0,1),nrow=1000))
+d_test$out<-rnorm(1000,0,1)
+
+myRMSE(predict(lm.all,d_test),d_test$out)
+myRMSE(predict(lm.sel,d_test),d_test$out)
+myRMSE(predict(lm.simple,d_test),d_test$out)
+myRMSE(predict(lm.zero,d_test),d_test$out)
+```
+
+The zero model shows the smallest root mean squared error. At the same time, the model has the smallest variance in this error (not shown). The holdout method ranks the linear models correctly. The zero model shows the smallest root mean squared error. At the same time, the model has the smallest variance in this error (not shown).
+
+Often, the sample set is small and new observations cannot be easily reached. Under such circumstances, ANOVA and cross-validation are available to compare the models. Let us start with ANOVA:
+
+```{r}
+anova(lm.zero,lm.simple,lm.sel,lm.all) 
+anova(lm.zero,lm.all)
+```
+
+ANOVA may often recommend lm.sel, which is not correct. The method may suffer from conceptual simplicity of the test (no need for test data, the decision made on train data only). However, ANOVA does not prefer lm.all over lm.zero, in general, it is a legitimate option. Let us employ cross-validation now:
+
+```{r}
+folds <- cvFolds(nrow(d), K = 10, R = 10) # 10 times repeated 10-fold CV
+cvFitLmAll <- cvLm(lm.all, cost = rtmspe, folds = folds, trim = 0.1)
+cvFitLmSel <- cvLm(lm.sel, cost = rtmspe, folds = folds, trim = 0.1)
+cvFitSimple <- cvLm(lm.simple, cost = rtmspe, folds = folds, trim = 0.1)
+cvFitZero <- cvLm(lm.zero, cost = rtmspe, folds = folds, trim = 0.1)
+cvFits <- cvSelect(ALL = cvFitLmAll, SEL = cvFitLmSel, SIMPLE = cvFitSimple, ZERO=cvFitZero)
+bwplot(cvFits) # rmse is the default cost function
+```
+
+The recommendation is misleading again, sel is best, full model worst. The problem was methodological in this case, **we cannot do feature selection on all the data**, we must proceed independently in all the folds! We will not implement the correct way of cross-validation here. However, remember that correct CV implementation could be non-trivial when doing learning, data preprocessing and hyperparameter tuning at the same time.
+
+## Summary
+
+Irrelevant features cause overfitting and make our models work worse on unseen data. If having a finite/limited sample set the learning algorithm finds spurious relationships which increases variance and thus error. Removal of irrelevant features is crucial namely when dealing with a large number of them. (Proper) testing on unseen data (hold-out method, cross-validation) can help to detect overfitting and find out the optimal complexity of the model. ANOVA helps to decide the complexity from one run of the model only.
