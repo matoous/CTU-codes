@@ -1,0 +1,23 @@
+data <- read.csv("iris.csv")
+
+# 1) Boxplot - Vizuálně posuďte informační vztah mezi typem kosatce (závisle proměnná) a proměnnými určujícími rozměry kosatce (nezávisle proměnná) [0.5b]
+
+# 2) Scatterplot - vizuálně posuďte vztah mezi proměnnými určujícími rozměry kosatce [0.5b]
+
+# 3) Posuďte informační vztah mezi typem kosatce a jaho rozměry statisticky.  [1.5b]
+# 3A) Navrhněte způsob testování
+# 3B) Formulujte nulovou hypotézu, ověřte předpoklady
+# 3C) Proveďte a slovně vyhodnoťte statistický test
+
+# 4) Statisticky posuďte vztah mezi proměnnými určujícími rozměry kosatce
+
+# BONUS) Z jednotlivých bodů 1-4 vytvořte markdown prezentaci
+
+
+
+
+
+
+
+
+

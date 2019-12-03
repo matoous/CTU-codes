@@ -1,0 +1,150 @@
+---
+title: "Introduction to dimensionality reduction"
+output:
+  html_document:
+    df_print: paged
+---
+
+### Overview
+
+This notebook deals with a linear (plane) and non-linear (sphere) 2D manifolds embedded in R^3 feature space. It applies PCA, kernel PCA and other non-linear methods to reduce the input data to 2D transformed space. It compares the outcomes of the individual dimensionality reduction methods. The comparison is in terms of their reconstruction error, if the reconstruction mapping is available or purely visually if the mapping is not available.
+
+### Load libraries, define the reconstruction error
+
+The reconstruction error is the sum of Euclidean distances between the original samples and their reconstructions in the input space. The sample reconstructions are reached through reconstruction mapping from the (reduced) transformed space, certain information (noise) may be lost.
+
+```{r prepare, echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library(scatterplot3d) # 3d plots
+library(mvtnorm) # generate spheres
+library(kernlab) # kernel PCA
+
+#' Calculate mean reconstruction error
+#'
+#' @param x the original sample matrix (samples in rows, features in columns)
+#' @param r the sample matrix after reconstruction (samples in rows, features in columns), the same dimension as x
+#' @return the mean reconstruction error
+#' @export
+recError <- function(x, r){
+  if (sum(dim(x)==dim(r))!=2){stop("Different dimensions!")}
+  recError<-0
+  for (i in 1:nrow(x)){
+    recError<-recError+sqrt(sum((x[i,]-r[i,])^2))
+  }
+  return(recError/nrow(x))
+}
+```
+
+### Generate input data 
+
+Generates two manifolds. The first is linear, it is a plane embedded in R^3 space (3D). The second is non-linear, it is a sphere, again embedded in R^3 space. 
+
+```{r}
+D = 3         # number of input dimensions
+m = 200       # number of samples
+sigma = 0.2   # standard deviation for noisy manifolds
+
+x<-runif(m,-1,1)
+y<-runif(m,-1,1)
+plane<-cbind(x,y,z=-x-0.5*y) # the plane is: x+0.5y+z=0, the normal vector is (1,0.5,1) or (0.66,0.33,0.66) when having unit size
+plane<-plane[order(plane[,"x"]+plane[,"y"]),] # sort observations to be able to visually understand them
+noisyPlane<-plane
+noisyPlane[,"z"]<-noisyPlane[,"z"]+rnorm(n=m,mean=0,sd=sigma)
+
+scatterplot3d(plane,color=rainbow(nrow(plane))) 
+s3d<-scatterplot3d(noisyPlane,color=rainbow(nrow(plane)))
+recoveredPlane<-lm(z~.,as.data.frame(noisyPlane)) # relearn the plane from noisy data, should approach the plane
+s3d$plane3d(recoveredPlane, lty="solid")  # add the recovered plane to the plot with noisy plane
+noisy.3d <- s3d$xyz.convert(noisyPlane[,"x"],noisyPlane[,"y"],noisyPlane[,"z"])  # locations of data points
+flat.3d <- s3d$xyz.convert(noisyPlane[,"x"],noisyPlane[,"y"], fitted(recoveredPlane)) # corresponding locations on the regression plane
+segments(noisy.3d$x, noisy.3d$y, flat.3d$x, flat.3d$y, lty="dashed")  # draw lines from data points to plane
+
+dirs <- rmvnorm(n = m, mean = rep(0, D)) # sample
+colnames(dirs) <- c("x","y","z")
+sphere <- dirs / sqrt(rowSums(dirs^2)) # normalize
+sphere <- sphere[order(sphere[,"z"]+cos(sphere[,"x"])+cos(sphere[,"y"])),] # sort observations to be able to visually understand them
+noisySphere <- sphere + rmvnorm(n = m, mean = rep(0, D), sigma = sigma/20 * diag(D)) # add noise
+
+scatterplot3d(sphere,color=rainbow(m))
+scatterplot3d(noisySphere,color=rainbow(m))
+```
+## Run PCA in first case
+
+Run PCA for the first manifold, reduce the dimension to the intrinsic dimension equal to 2, reconstruct the data and check its reconstruction error. The script shows that PCA captures the manifold, dimensionality reduction maintains a major part of variance and may partly denoise the samples.
+```{r}
+pca_noisyPlane<-prcomp(noisyPlane) # the most common call
+eigen(cov(noisyPlane)) # an analogy of the previous call, calculate eigenvectors from the covariance matrix
+summary(pca_noisyPlane) # get info about projection, the first two components capture a major part of variance!
+biplot(pca_noisyPlane,cex=0.7) # understand the data, the role of features in principal components and distribution of objects
+scatterplot3d(pca_noisyPlane$x,color=rainbow(nrow(plane)),zlim = c(-2,2),type = "h") # Full transformation
+plot(pca_noisyPlane$x[,1:2],col=rainbow(nrow(plane))) # once more with the sample colors, PC1 and PC2 maintain the plane (shape, positions)
+
+# see the projection in the tranformed space, no reduction
+t_noisyPlane<-noisyPlane%*%pca_noisyPlane$rotation
+t_noisyPlane_centered<-as.data.frame(t(apply(t_noisyPlane,1,"-",colMeans(t_noisyPlane)))) # center the data
+head(predict(pca_noisyPlane,noisyPlane)) # the same result with predict from prcomp
+
+# now reduce the data and see what happens in the input space
+t_noisyPlane_reduced<-cbind(t_noisyPlane[,c(1,2)],rep(0,m))
+
+r_noisyPlane<-t_noisyPlane%*%t(pca_noisyPlane$rotation) # identical with the original values, to check and show the reconstruction
+r_noisyPlane_reduced<-t_noisyPlane_reduced[,c(1,2)]%*%t(pca_noisyPlane$rotation[,c(1,2)]) # get the reconstruction after 2D reduction
+r_noisyPlane_reduced<-as.matrix(noisyPlane)%*%pca_noisyPlane$rotation[,c(1:2)]%*%t(pca_noisyPlane$rotation[,c(1,2)]) # the same outcome, a different formula
+
+s3d<-scatterplot3d(noisyPlane)
+s3d$points3d(r_noisyPlane_reduced,col=rainbow(m),pch=4)
+s3d$plane3d(recoveredPlane, lty="solid")  # add the recovered plane to the plot with noisy plane
+recovered.3d <- s3d$xyz.convert(r_noisyPlane_reduced[,"x"],r_noisyPlane_reduced[,"y"],r_noisyPlane_reduced[,"z"])  # locations of data points
+flat.3d <- s3d$xyz.convert(r_noisyPlane_reduced[,"x"],r_noisyPlane_reduced[,"y"], fitted(recoveredPlane)) # corresponding locations on the regression plane
+segments(recovered.3d$x, recovered.3d$y, flat.3d$x, flat.3d$y, lty="dashed")  # draw lines from data points to plane
+```
+
+When looking at the reconstruction error, let us see the error caused by noise in the input space. This error serves as a reference. Its value is `r recError(plane,noisyPlane)`. Then, we may easily check that reconstruction with no dimensionality reduction fully recovers the original noisyPlane, the reconstruction error is `r recError(noisyPlane,r_noisyPlane)`. Next, we can see that noisyPlane is still well captured after the reduction, the reconstruction error is `r recError(noisyPlane,r_noisyPlane_reduced)`. Eventually, let us compare the original plane wihout any noise and the plane recovered after the dimensionality reduction. This error is `r recError(plane,r_noisyPlane_reduced)`. If smaller than the error in the noisyPlane (the first one), dimensionality reduction works as (partial) denoising.
+
+There is a couple of reasons why denoising is not perfect in terms of our reconstruction error. Firstly, the plane is learnt from a limited sample, it is not recovered perfectly. Compare the normal vector of the original plane (0.66,0.33,0.66) and the normal vector of the denoised plane given by PC3 (the perpendicular vector to the recovered plane captured by PC1 and PC2) which is `r pca_noisyPlane$rotation[,"PC3"]`. Secondly, denosing means to map to any point that lies on the manifold, that ncessarily does not have to be the original point (compare the two error definitions in the lecture).
+
+## Run PCA for the second manifold
+
+The procedure remains the same. The script shows that PCA captures the manifold, dimensionality reduction maintains a major part of variance and may partly denoise the samples.
+```{r}
+pca_noisySphere<-prcomp(noisySphere) # the most common call
+eigen(cov(noisySphere)) # an analogy of the previous call, calculate eigenvectors from the covariance matrix
+summary(pca_noisySphere) # get info about projection, the first two components capture only slightly more than 2/3 of variance!
+biplot(pca_noisySphere,cex=0.7) # understand the data, the role of features in principal components and distribution of objects
+
+# see the projection in the tranformed space, no reduction
+t_noisySphere<-noisySphere%*%pca_noisySphere$rotation
+t_noisySphere_centered<-as.data.frame(t(apply(t_noisySphere,1,"-",colMeans(t_noisySphere)))) # center the data
+head(predict(pca_noisySphere,noisySphere)) # the same result with predict from prcomp
+scatterplot3d(t_noisySphere_centered,color=rainbow(m))
+
+# now reduce the data and see what happens in the input space
+t_noisySphere_reduced<-cbind(t_noisySphere[,c(1,2)],rep(0,m))
+
+r_noisySphere<-t_noisySphere%*%t(pca_noisySphere$rotation) # identical with the original values, to check and show the reconstruction
+r_noisySphere_reduced<-t_noisySphere_reduced[,c(1,2)]%*%t(pca_noisySphere$rotation[,c(1,2)]) # get the reconstruction after 2D reduction
+r_noisySphere_reduced<-as.matrix(noisySphere)%*%pca_noisySphere$rotation[,c(1:2)]%*%t(pca_noisySphere$rotation[,c(1,2)]) # the same outcome, a different formula
+
+s3d<-scatterplot3d(sphere)
+s3d$points3d(r_noisySphere_reduced,,col=rainbow(m),pch=4)
+recovered.3d <- s3d$xyz.convert(r_noisySphere_reduced[,"x"],r_noisySphere_reduced[,"y"],r_noisySphere_reduced[,"z"])  # locations of data points
+orig.3d <- s3d$xyz.convert(sphere[,"x"],sphere[,"y"], sphere[,"z"]) # the original sphere
+segments(recovered.3d$x, recovered.3d$y, orig.3d$x, orig.3d$y, lty="dashed")  # draw lines from data points to Sphere
+```
+
+TYe referential error caused purely by the noise is in this spherical case `r recError(sphere,noisySphere)`. Similarly to the previous example, the reconstruction with no dimensionality reduction fully recovers the original noisySphere, the reconstruction error is `r recError(noisySphere,r_noisySphere)`. On the contrary to the previous example, the dimensionality reduction leads to the large reconstruction errors. The noisySphere reduction error is much larger than the original noise, its magnitude is `r recError(noisySphere,r_noisySphere_reduced)`. At the same time, no denoising happened as the error that captures the distance between the original sphere without noise and the sphere recovered after the dimensionality reduction is `r recError(sphere,r_noisySphere_reduced)`.
+
+## Apply kernel PCA
+
+The noise removal in the second case can obviously be improved with non-linear methods such as kernel PCA. We will try kernel PCA with three different kernels ... linear (no change from PCA), polynomial and RBF.
+
+```{r}
+kpc <- kpca(~.,data=as.data.frame(noisySphere),kernel="polydot",kpar=list(degree=1,offset=0),features=3) # run kernel PCA with linear kernel
+scatterplot3d(pcv(kpc),color=rainbow(m),main="Linear kernel") # identical with PCA, the manifold not denoised
+kpc <- kpca(~.,data=as.data.frame(noisySphere),kernel="polydot",kpar=list(degree=2),features=3) # run kernel PCA with quadratic kernel
+scatterplot3d(pcv(kpc),color=rainbow(m),main="Quadratic kernel") # improper transform
+kpc <- kpca(~.,data=as.data.frame(noisySphere),kernel="rbfdot",kpar=list(sigma=0.8),features=3) # run kernel PCA with RBF kernel
+# print the principal component vectors
+scatterplot3d(pcv(kpc),color=rainbow(m),main="RBF kernel") # the manifold is denoised, however the object positions changed
+plot(pcv(kpc)[,1:2],col=rainbow(m)) # the first two components only 
+```
+

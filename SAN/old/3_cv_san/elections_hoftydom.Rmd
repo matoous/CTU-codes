@@ -1,0 +1,174 @@
+---
+title: "Elections"
+author: "Dominik Hoftych"
+
+date: "October 27, 2018" (late, sorry)
+output:
+  ioslides_presentation: default
+  beamer_presentation: default
+---
+
+
+```{r, echo = FALSE}
+rm(list=ls()) #to clear the environment variables
+
+#echo = FALSE in the R section header means to not include the command
+
+# IMPORTANT, set your working directory correctly, sometimes absolute path has to be given
+# The directory is expected to include all three files: 
+# 1.This file Presentation_class.Rmd, 2. GlobalElections_Czech ... .csv, 3. labels.csv
+#setwd("C:/Users/hofiisek/Dropbox/CVUT/MGR/1. semestr/SAN/3_cv_san") 
+
+mydata = read.csv("GlobalElections_Czech elections.csv", stringsAsFactors = FALSE)
+
+# IMPORTANT get rid of all the console output
+# head(mydata) 
+# head(mylabels)
+# View(head(mydata))
+# mydata
+
+# IMPORTANT - fill the N/A values to default value e.g. 0
+mydata[is.na(mydata)] = 0
+
+# SEATS INFORMATION
+# we select sub-dataframe by a vector of column names
+# We are taking only what we are interested in: "year", "legid" and all the seats election results "p<number>s"
+seatsDf = mydata[c("year", "legid", grep("p(\\d+)s", colnames(mydata), value = TRUE))]
+seatsDf = seatsDf[ , colSums(seatsDf) > 0]
+# seatsDf
+# drop the s from "p<number>s" to only "p<number>"
+colnames(seatsDf) = sub("p(\\d+)s", "p\\1", colnames(seatsDf))
+
+# aggregate all the columns according to year and legid
+dfSeatSum = aggregate(.~year+legid, seatsDf, sum)
+
+# IMPORTANT get rid of the transform function as it renames column name and can cause trouble for real world names in our next section
+# informatively we include the overall sum 
+# colIndex = colnames(seatsDf) %in% c("legid", "year")
+# dfSeatSum = transform(dfSeatSum, sum=rowSums(dfSeatSum[!colIndex]))
+
+#taking sub dataframe of the lowerhouse voting, hence where rows have legid = 1
+dfSeatSumLowerH = dfSeatSum[dfSeatSum$legid == 1, ]
+
+#drop all parties that did not win any seats whatsoever
+dfSeatSumLowerH = dfSeatSumLowerH[ , colSums(dfSeatSumLowerH) > 0]
+
+# select year 2006 and only seat columns, leaving out first 2: year and legid 
+s2006sum = sum(dfSeatSumLowerH[dfSeatSumLowerH$year==2006, 3:ncol(dfSeatSumLowerH)])
+# s2006sum #important get rid of the console output for compilation
+
+# REAL NAMES
+# IMPORTANT if you are facing troubles with loading the labels.csv, you can UN-COMMENT the following:
+# dfSeatsReal = dfSeatSumLowerH 
+
+# and COMMENT-OUT the following section (select + ctrl shift c)
+
+mylabels = read.csv("labels.csv", stringsAsFactors = FALSE)
+  #IMPORTANT include newline at the end of file in gedit or notepad to get rid of the warning
+  #IMPORTANT Fix encoding on windows
+
+  #IMPORTANT some labels for voting p<number>v and some years are MISSING. Use 2006 for simplicity sake.
+  #IMPORTANT if you have problems with real names, you do not have to include them in your graphs
+
+dfSeatsReal = dfSeatSumLowerH
+colnames(dfSeatsReal) = c("year", "legid", as.character(mylabels[grep("p(\\d+)",colnames(dfSeatsReal), value = TRUE)]))
+#
+# ## SHORT NAMES
+colnames(dfSeatsReal)[3:ncol(dfSeatsReal)] = sub("[^[]+", "" , colnames(dfSeatsReal[3:ncol(dfSeatsReal)]))
+
+#IMPORTANT the regex can match something we do not want "Nezavisli kandidati" will be renamed to "" (nothing)
+# Thankfully such parties never won anything :D, so we leave it as it is for now.
+# dfSeatsReal
+```
+
+## Data overview
+```{r, echo=FALSE}
+knitr::kable(mydata[1:5,1:8])
+```
+
+## Year 2006
+```{r}
+data2006 = mydata[mydata$year == 2006, ]
+knitr::kable(head(mydata))
+```
+
+## Seats Information
+<!-- IMPORTANT space in between the output and new header is critical for it to be recognized by markdown -->
+Seats but no real names
+```{r, echo = FALSE}
+knitr::kable(dfSeatSumLowerH)
+```
+
+## Seats information
+seats with real short version names
+```{r}
+knitr::kable(dfSeatsReal)
+```
+
+
+## Plot seats/years
+lower house election seats history through the years
+```{r, echo=FALSE}
+# possibly tune the plot to show all the years
+# IMPORTANT no need to use ggplot for your own plots picharts, scatterplots etc, you can use simple plots from our Intro.R file
+library(ggplot2)
+library(reshape)
+Molten <- melt(dfSeatsReal[ , !(colnames(dfSeatsReal) %in% c("legid"))], id.vars = "year")
+ggplot(Molten, aes(x = year, y = value, colour = variable)) + geom_line()
+```
+
+## Final
+<!-- # IMPORTANT always leave blank line before the markdown headers  for them to be recognized -->
+```{r, echo=FALSE}
+
+
+
+# <!-- ## Additional Info -->
+# <!-- Numbers of capable voters from Wikipedia -->
+# 
+# <!-- - 1996 (7 990 770) -->
+# <!-- - 1998 (8 116 836) -->
+# <!-- - 2002 (8 264 484) -->
+# <!-- - 2006 (8 333 305)  -->
+
+capableVotersNumber = list('1996.1' = 7990770,'1998.1' = 8116836, '2002.1' = 8264484, '2006.1' = 8333305)
+mydata[is.na(mydata)] <- 0
+yearLegidSplit <- split(mydata, list(mydata$year, mydata$legid))
+#knitr::kable(yearLegidSplit)
+
+filterSeatsAndVotes = function(yearLegid) {
+  nonnull = yearLegid[, !apply(yearLegid, MARGIN = 2, function(x) { all(x==0)})]
+  seats = yearLegid[, grep("p\\d+s", colnames(yearLegid))]
+  votes = yearLegid[, grep("p\\d+v", colnames(yearLegid))]
+  return(list (colSums(seats), colSums(votes)))
+}
+
+seatsAndVotes <- lapply(yearLegidSplit, filterSeatsAndVotes)
+sumSeatsAndVotes = list('1996.1' = sum(seatsAndVotes$`1996.1`[[2]]), '1998.1' = sum(seatsAndVotes$`1998.1`[[2]]),
+                     '2002.1' = sum(seatsAndVotes$`2002.1`[[2]]), '2006.1' = sum(seatsAndVotes$`2006.1`[[2]]))
+
+percentualVotes1996 = round((sumSeatsAndVotes$`1996.1` / capableVotersNumber$`1996.1`)*100,1)
+percentualVotes1998 = round((sumSeatsAndVotes$`1998.1` / capableVotersNumber$`1998.1`)*100,1)
+percentualVotes2002 = round((sumSeatsAndVotes$`2002.1` / capableVotersNumber$`2002.1`)*100,1)
+percentualVotes2006 = round((sumSeatsAndVotes$`2006.1` / capableVotersNumber$`2006.1`)*100,1)
+
+# 
+# <!-- Percentages approximately from Wikipedia -->
+#
+# <!-- - 1996 (82,3 %) -->
+# <!-- - 1998 (80,7 %) -->
+# <!-- - 2002 (57,7 %) -->
+# <!-- - 2006 (64,2 %)  -->
+# IMPORTANT percentages are expected to be calculated 
+# not copied from here to markdown :D
+
+#it still plots weird data, couldn't figure out unfortunatelly :()
+pie(seatsAndVotes$`1996.1`[[1]],labels=c("SZ", "CSSD", "KDU-CSL", "ODS", "NEZ"), col=rainbow(5), main="Seats 1996")
+
+barplot(seatsAndVotes$`1996.1`[[2]][1:5], names.arg = c("SZ", "CSSD", "KDU-CSL", "ODS", "NEZ"), col = rainbow(5), main = "Votes 1996")
+
+```
+
+
+
+

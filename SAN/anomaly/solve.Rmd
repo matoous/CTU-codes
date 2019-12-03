@@ -1,0 +1,82 @@
+---
+title: "anomaly"
+author: "Matous Dzivjak"
+date: "12/2/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library('FNN')
+library('AUC')
+library('latticeExtra') 
+library('verification')
+library(ROCit)
+
+read_dir <- function(dirName) {
+  anomalFile = paste(dirName, 'anomalous.csv', sep='')
+  normalFile = paste(dirName, 'normal.csv', sep='')
+  data_anomalous = as.matrix(read.csv(anomalFile, header=TRUE))
+  data_anomalous = cbind(data_anomalous, rep(1,nrow(data_anomalous)))
+  data_normal = as.matrix(read.csv(normalFile, header=TRUE))
+  data_normal = cbind(data_normal, rep(0,nrow(data_anomalous)))
+  problem = rbind(data_anomalous, data_normal)
+  colnames(problem) = c("x","y","anomalous")
+  return(data.frame(problem))
+}
+
+knn_eval <- function(data, k) {
+  knn <- get.knn(data.frame(data$x, data$y), k)
+  dists <- knn$nn.dist
+  sorted_desc <- order(dists[,k], decreasing = TRUE)
+  anomalous_count = length(which(data$anomalous==1))
+  normal_count = length(which(data$anomalous==0))
+  p <- anomalous_count/normal_count
+  p_count <- round(p*nrow(data))
+  # mark first 'p' (those with longest distances) as anomalous
+  first_p <- sorted_desc[1:p_count]
+  anomalous_labels = rep(0,nrow(dists))
+  anomalous_labels[first_p] = 1
+  # calculate auc for given k
+  auc_val <- auc(roc(anomalous_labels, factor(data$anomalous)))
+  ROCit_obj <- rocit(score=df$predictions,class=df$labels)
+  return(auc_val)
+}
+
+list.dirs <- function(path="problems/", pattern=NULL, all.dirs=FALSE,
+                      full.names=TRUE, ignore.case=FALSE) {
+  # use full.names=TRUE to pass to file.info
+  all <- list.files(path, pattern, all.dirs,
+                    full.names=TRUE, recursive=FALSE, ignore.case)
+  dirs <- all[file.info(all)$isdir]
+  # determine whether to return full names or just dir names
+  if(isTRUE(full.names))
+    return(dirs)
+  else
+    return(basename(dirs))
+}
+
+data <- read_dir("problems/magic-telescope/")
+k_values = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,50)
+for(k in k_values) {
+  aucval <- knn_eval(data, k)
+  print(aucval)
+}
+
+problems = list()
+for(dir in list.dirs()){
+  data <- read_dir(paste(dir,"/", sep=''))
+  print(paste(dir, "following results:"))
+  k_values = c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,25,50)
+  for(k in k_values) {
+    aucval <- knn_eval(data, k)
+    print(aucval)
+  }
+}
+
+
+
+```

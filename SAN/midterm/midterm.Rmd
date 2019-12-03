@@ -1,0 +1,62 @@
+---
+title: "MidtermTest"
+author: "Matous Dzivjak"
+output: pdf_document
+---
+  
+# Arrests
+
+```{r}
+advertising <-  read.csv('datasets/Advertising.csv', header = TRUE)
+arrests <-  read.csv('datasets/USArrests.csv', header = TRUE)
+advertising <- as.data.frame(advertising)
+summary(arrests)
+attach(arrests)
+quantile(Murder, probs = c(0.05), names=TRUE)
+boxplot(Rape, main = "Boxplot of rape", xlab = "All states", ylab = "Number of rapes")
+```
+
+In boxplot the box has center on median (half of the scores are greater and half lower) and 
+lower and upper bounds where 50% of the scores lay (e.g. 50% of the scores are in the box). The lines connected to the box with vertical lines
+are upper quartile (seventy-five percent of the scores fall below the upper quartile) and 
+lower quartile (twenty-five percent of scores fall below the lower quartile). 
+Separate points are outliers 
+
+# Advertising
+
+```{r}
+library(ggplot2)
+attach(advertising)
+summary(advertising)
+```
+
+## TV sales
+```{r}
+TVmodel <- lm(sales ~ TV)
+summary(TVmodel)
+plot(sales, TV, col = "blue", main = "Dependence of Sales on TV advertisment", xlab = "TV Advertisment budget", ylab = "Sales")
+ggplot(data = advertising) + 
+  geom_point(mapping = aes(x = TV, y = sales)) +
+  geom_smooth(mapping = aes(x = TV, y = sales), method=lm) 
+```
+
+## Newspaper sales
+```{r}
+newsmodel <- lm(sales ~ newspaper)
+summary(newsmodel)
+plot(sales, newspaper, col = "blue", main = "Dependence of Sales on News advertisment", xlab = "Newspaper Advertisment budget", ylab = "Sales")
+ggplot(data = advertising) + 
+  geom_point(mapping = aes(x = newspaper, y = sales)) +
+  geom_smooth(mapping = aes(x = newspaper, y = sales), method=lm) 
+```
+
+## Predict sales
+```{r}
+newdata <- data.frame(TV = c(50))
+predict(TVmodel, newdata)
+
+newdata <- data.frame(newspaper = c(50))
+predict(newsmodel, newdata)
+```
+
+We expect greater increase for newspaper because for one unit of advertisment we have bigger change in sales as cen be seen in the coefficient from summary of the model.

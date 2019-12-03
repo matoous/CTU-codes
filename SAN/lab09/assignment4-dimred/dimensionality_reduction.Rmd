@@ -1,0 +1,152 @@
+---
+title: "Dimensionality reduction"
+author: "Matouš Dzivjak"
+date: "17. 11. 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The goal of this tutorial is to get familiar with some basic methods for dimensionality
+reduction, complete you own implementation of the **Isomap algorithm** (in cooperation with *Multidimensional scaling*), experiment with its parameters and compare with other techniques of dimensionality reduction (**PCA**, **t-SNE**).
+
+## Background
+
+The data you will be working with are vector representations of words in a latent (unknown) high-dimensional space. This representation of words, also know as word embedding, differs from standard bag-of-words (BoW, TFIDF, etc.) representations in that the meaning of the words is distributed across all the dimensions. Generally speaking, the word embedding algorithms seek to learn a mapping projecting the original BoW representation (simple word index into a given vocabulary) into a lower-dimensional (but still too high for our cause) continuous vector-space, based on their distributional properties observed in some raw text corpus. This distributional semantics approach to word representations is based on the basic idea that linguistic items with similar distributions typically have similar meanings, i.e. words that often appear in a similar context (words that surround them) tend to have similar (vector) representations.
+
+Speciffically, the data you are presented with are vector representations coming from the most popular algorithm for word embedding known as word2vec[^1] by Tomas Mikolov (VUT-Brno alumni). *Word2vec* is a (shallow) neural model learning the projection of BoW word representations into a latent space by the means of gradient descend. Your task is to further reduce the dimensionality of the word representations to get a visual insight into what has been learned.
+
+[^1]: Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S Corrado, and Jeff Dean. Distributed representations of words and phrases and their compositionality. In *Advances in neural information processing systems*, pages 3111-3119, 2013.
+
+## Data
+You are given 300-dimensional word2vec vector embeddings in the file *data.csv* with corresponding word labels in *labels.txt* for each line. Each of these words comes from one of 10 selected classes of synonyms, which can be recognized (and depicted) w.r.t. labels denoted in the file *colors.csv*
+
+```{r include=FALSE, message=FALSE}
+PlotPoints <- function(X, labels, colors){
+  library(deldir, quietly = TRUE)
+  voronoi <- deldir(X[,1], X[,2])
+  plot(X[,1], X[,2], type="n", asp=1, xlab = "", ylab = "")
+  points(X[,1], X[,2], pch=20, col=colors[,1], cex=1.3)
+  text(X[,1], X[,2], labels = labels[,1], pos = 1, cex = 0.6)
+  plot(voronoi, wlines="tess", wpoints="none", number=FALSE, add=TRUE, lty=1)
+  legend("topleft", legend = sort(unique(colors[,1])), col=sort(unique(colors[,1])), pch=20, cex = 0.8)
+}
+
+Classify <- function(X, colors, kfolds = 50){
+  #install.packages('tree')
+  library(tree)
+  #library(caret)
+  set.seed(17)
+  #add class
+  if(!any(names(X) == "class")){X <- cbind(X, class=as.factor(colors))}
+  #randomly shuffle the data
+  data <-X[sample(nrow(X)),]
+  #Create 10 equally size folds
+  folds <- cut(seq(1,nrow(data)),breaks=kfolds,labels=FALSE)
+  acc <- rep(0, times = kfolds)
+  #10 fold cross validation
+  for(i in 1:kfolds){
+    #Segment your data by fold using the which() function 
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- data[testIndexes, ]
+    trainData <- data[-testIndexes, ]
+    model <- tree(formula = class ~., data = trainData)
+    pre <- predict(model, newdata=testData, y = TRUE, type="class")
+    acc[i] <- sum(pre == testData$class)/length(testData$class)
+  }
+  return(acc)
+}
+```
+
+## Tasks
+1. **Load the dataset of 165 words**, each represented as a 300-dimensional vector. Each word is assigned to one of 10 clusters.
+```{r}
+#Load the dataset of 165 words
+mydata <- read.csv('data.csv', header = FALSE)
+mylabels <- read.csv('labels.txt', header = FALSE)
+mycolors <- read.csv('colors.csv', header = FALSE)
+```
+
+The data is in the matrix `mydata`, cluster assignment in `mycolors` and the actual words (useful for visualization) in `mylabels`. You can plot the data by using only the first 2 dimensions. 
+
+```{r}
+PlotPoints(mydata[,c(1,2)], mylabels, mycolors)
+```
+
+2. **Implement ISO-MAP dimensionality reduction procedure**.
+  * Use *k*-NN method to construct the neighborhood graph (sparse matrix).
+    - For simplicity, you can use `get.knn` method available in `FNN` package.
+  * Compute shortest-paths (geodesic) matrix using your favourite algorithm.
+    - Tip: Floyd-Warshall algorithm can be implemented easily here.
+  * Project the geodesic distance matrix into 2D space with (Classical) Multidimensional Scaling (`cmdscale` functions in R).
+  * Challenge: you may simply use PCA to do the same, but be careful to account for a proper normalization (centering) of the geodesic (kernel) matrix (see Kernel PCA for details).
+  
+An expected result (for *k* = 5) should look similar (not necessarily exactly the same) to following
+![Example output](graph_12.pdf)
+
+```{r}
+library('FNN')
+library('KODAMA')
+
+#1.Determine the neighbors of each point (k-NN)
+neighbours <- get.knn(mydata, k=5, algorithm=c("kd_tree", "cover_tree", "CR", "brute"))
+
+#2.Construct a neighborhood graph.
+m <- matrix(+Inf,nrow=dim(neighbours$nn.index)[1],ncol=dim(neighbours$nn.index)[1])
+for (i in 1:dim(neighbours$nn.index)[1]) {
+  for (j in 1:dim(neighbours$nn.index)[2]) {
+    if(i == j) m[i,j] = 0
+    m[i,neighbours$nn.index[i,j]] = neighbours$nn.dist[i,j]
+    m[neighbours$nn.index[i,j],i] = neighbours$nn.dist[i,j]
+  }
+}
+
+#3.Compute shortest path between two nodes. (Floyd-Warshall algorithm)
+D<-floyd(m)
+
+#4.(classical) multidimensional scaling
+fit <- cmdscale(D,eig=TRUE, k=2)
+PlotPoints(fit$points, mylabels, mycolors)
+```
+
+3. **Visually compare PCA, ISOMAP and t-SNE** by plotting the word2vec data, embedded into 2D using the `Plotpoints` function. Try finding the optimal *k* value for ISOMAP's nearest neighbour.
+```{r eval=FALSE}
+#Principal component analysis
+fitPCA <- prcomp(mydata, center = TRUE, scale. = TRUE)
+PlotPoints(fitPCA$x[,c(1,2)], mylabels, mycolors)
+
+#t-SNE (T-Distributed Stochastic Neighbor Embedding)
+#install.packages('tsne')
+library(tsne)
+fittsne <- tsne(mydata, k = 2)
+PlotPoints(fittsne, mylabels, mycolors)
+```
+
+
+4. **Observe the effect of dimensionality reduction on a classiffication algorithm**. The supporting code in a function `Classify` performs training and testing of classification trees and gives the classification accuracy (percentage of correctly classified samples) as its result. Compare the accuracy of prediction on plain data, PCA, ISOMAP and t-SNE.
+```{r eval=FALSE}
+#classify ISOMAP
+accISOMAP <- Classify(as.data.frame(fit$points), mycolors$V1, 50)
+
+#classify PCA
+accPCA <- Classify(as.data.frame(fitPCA$x), mycolors$V1, 50)
+
+#classify t-SNE
+accTSNE <- Classify(as.data.frame(fittsne), mycolors$V1, 50)
+
+#PLOT results
+print(paste("ISOMAP ACC:", mean(accISOMAP)))
+print(paste("PCA ACC:", mean(accPCA)))
+print(paste("t-SNE ACC:", mean(accTSNE)))
+```
+
+# Conclusion
+
+The ISOMAP method achieved best accuracy (if correctly implemented) which can be seen from the above plots as well.
+From the plots can be also seen that the points are more separated compared to other methods where the points tend to be
+more centered and closer together.
+

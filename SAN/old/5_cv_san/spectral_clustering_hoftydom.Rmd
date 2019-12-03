@@ -1,0 +1,359 @@
+---
+title: "Statistical data analysis"
+subtitle: "Spectral Clustering"
+author: "Dominik Hoftych"
+date: "November 05, 2018"
+output: html_document
+---
+
+```{r}
+rm(list=ls())
+setwd("~/Dropbox/CVUT/MGR/1. semestr/SAN/5_cv_san")
+```
+
+```{r include=FALSE}
+LoadDataset <- function(path, title="Unknown dataset", csv = FALSE){
+  if(csv){
+    X <- read.csv(path, header = FALSE)
+  }
+  else{
+    X <- read.table(path) 
+  }
+  names(X) <- c("x", "y", "label")
+  plot(X$x, X$y, col=X$label, xlab = "x", ylab = "y", main = title)
+  return(X)
+}
+
+CalcSimMatrix <- function(points, sigma = 0.5){
+  D <- dist(points, method = "euclidean") #Euclidean distance matrix
+  D <- as.matrix(D)
+  D <- D^2
+  S <- exp(-D / (2 * sigma^2)) #Gaussian similarity function
+  return(S)
+}
+
+PlotConnectedGraph <- function(data, dist){
+  plot(data$x, data$y, col=data$label, xlab = "x", ylab = "y", main = "Connectivity graph")
+  indecesx <- which(dist > 0, arr.ind = TRUE)
+  for(i in 1:nrow(indecesx)){
+    lines(data[indecesx[i,],])
+  }
+}
+
+#Get accuracy
+Purity <- function(clusters, labels){
+  #clusters - vector of values determining the class
+  #labels
+  return(sum(apply(table(labels, clusters), 2, max)) / length(labels))
+}
+
+```
+
+#Load a data
+In this task, we will work with two synthetic datasets: Spiral dataset (spiral.txt) containing three clusters and Jain's toy problem dataset (jain.txt) containing two clusters. Now, we will demonstrate a code for the first dataset (Spiral dataset). A code and results for the second dataset have to be attached by students at the end of this report. Firstly, look at the original Spiral dataset with the ideal assignment.
+```{r load data}
+#Dataset
+#mydataset <- LoadDataset("jain.txt", "A.K. Jain's Toy problem")
+mydataset <- LoadDataset("spiral.txt", "Spiral dataset")
+```
+
+Visualization of k-means algorithm that was applied to the Spiral dataset. Purity function shows how good each point was assigned to the proper cluster.
+```{r kmeans}
+#Kmeans
+res <- kmeans(mydataset, centers = 3)
+plot(mydataset$x, mydataset$y, col=res$cluster, main = "Spiral dataset - k-means", xlab = "x", ylab = "y")
+Purity(res$cluster, mydataset$label)
+```
+
+#1.Computation of similarity matrix
+CalcSimMatrix function calculates Euclidean distances between pairs of points and afterwards applies Gaussian kernel.
+```{r}
+#Calculate Similarity matrix
+d <- CalcSimMatrix(mydataset[,1:2], sigma = 0.35) # 0.15
+```
+
+#2.Construction of similarity graph
+In this task, we take into consideration three different similarity graphs. All of them, you will implement.
+
+###2.a $\epsilon$-graph [0.5p]
+The first and the most trivial is $\epsilon$-graph that connects all points whose pairwise distance are smaller than $\epsilon$.
+```{r}
+BuildEpsilonGraph <- function(D, e = 0.2){
+  D[D<e] <- 0
+  return(D)
+}
+```
+
+For checking and showing a connectivity graph use 'PlotConnectedGraph' function.
+```{r}
+#Epsilon Graph
+similarityGraph_epsilon <- BuildEpsilonGraph(d, e = 0.002)
+PlotConnectedGraph(mydataset, similarityGraph_epsilon)
+
+```
+
+###2.b Directed knn graph [1p]
+Directed graph is a such graph that connects vertex $v_i$ with vertex $v_j$ if $v_j$ is among the $k$-nearest neighbors of $v_i$. Note that this leads to non-symetric relationships.
+```{r}
+BuildDirectedKNNGraph <- function(D, k = 5){
+  # one way
+  # indicesCols<- as.matrix(t(apply(D,2,order,decreasing = TRUE)))
+  # firstKindsCols <- indicesCols[,1:k]
+  # for (i in 1:dim(D)[1]) {
+  #    D[i,-c(firstKindsCols[i,])] <- 0
+  # }
+  
+  # another way
+  sortedRowInds<- as.matrix(t(apply(D,1,order,decreasing = TRUE)))
+  firstKcolumnsInds <- sortedRowInds[,1:k]
+   for (i in 1:dim(D)[1]) {
+     for(j in 1:dim(D)[2]){
+        if(!is.element(j,firstKcolumnsInds[i,])){
+          D[i,j] <- 0
+        }
+      }
+   }
+  return(D)
+}
+
+```
+
+```{r}
+#Directed Graph
+similarityGraph_direct <- BuildDirectedKNNGraph(d, k = 3)
+# print(similarityGraph_direct[1:5,1:5])
+PlotConnectedGraph(mydataset, similarityGraph_direct)
+
+```
+
+###2.c Undirected knn graph [1p]
+To making similarity graph undirected, we can apply two approaches. First variant connect $v_i$ and $v_j$ if $v_i$ is among the $k$-nearest neighbors of $v_j$ or if $v_j$ is among the $k$-nearest neighbors of $v_i$. The second variant connect vertices $v_i$ and $v_j$ if both $v_i$ is among the $k$-nearest neighbors of $v_j$ and $v_j$ is among the $k$-nearest neighbors of $v_i$. Use 'mutual' parameter in 'BuildUndirectedKNNGraph' function to distinguish between these two variants.
+```{r}
+BuildUndirectedKNNGraph <- function(D, k = 5, mutual = FALSE){
+  
+  sortedRowInds<- as.matrix(t(apply(D,1,order,decreasing = TRUE)))
+  firstKcolumnsInds <- sortedRowInds[,1:k]
+  
+  # not used
+  # sortedColInds <- as.matrix(t(apply(D,2,order,decreasing=TRUE)))
+  # firstKrowsInds <- sortedColInds[1:k,]
+  
+  for(i in 1:dim(D)[1]){
+    if(mutual){
+      for(j in 1:dim(D)[2]){
+        # I really dont know why this is not working.....
+        # if(!is.element(j,firstKcolumnsInds[i,]) | !is.element(i,firstKrowsInds[,j])){
+        #   D[i,j] <- 0
+        # }
+        if(!is.element(j,firstKcolumnsInds[i,]) | !is.element(i,firstKcolumnsInds[j,])){
+           D[i,j] <- 0
+        }
+      }
+    }else{
+      for(j in 1:dim(D)[2]){
+        # I really dont know why this is not working.....
+        # if(!is.element(j,firstKcolumnsInds[i,]) & !is.element(i,firstKrowsInds[,j])){
+        #   D[i,j] <- 0
+        # }
+        if(!is.element(j,firstKcolumnsInds[i,]) & !is.element(i,firstKcolumnsInds[j,])){
+           D[i,j] <- 0
+        }
+      }
+    }
+  }
+  return(D)
+}
+```
+
+The first variant of undirected knn graph.
+```{r}
+similarityGraph_undirect_false <- BuildUndirectedKNNGraph(d, k = 3, mutual = FALSE)
+print(similarityGraph_undirect_false[1:5,1:5])
+# print(similarityGraph_undirect_false[100:125,100:125])
+PlotConnectedGraph(mydataset, similarityGraph_undirect_false)
+
+```
+
+The second variant of undirected knn graph.
+```{r}
+
+similarityGraph_undirect_true <- BuildUndirectedKNNGraph(d, k = 5, mutual = TRUE)
+print(similarityGraph_undirect_true[1:5,1:5])
+# print(similarityGraph_undirect_true[100:125,100:125])
+PlotConnectedGraph(mydataset, similarityGraph_undirect_true)
+```
+
+#3. Derivation of Laplace matrix [0.5p]
+Now, it is necessary to implement Laplace matrices of the similarity graph.
+```{r}
+CalcLaplacian <- function(W){
+  # calc degree matrix D - diagonal matrix containing degrees of each vertex
+  degrees <- rowSums(W)
+  D <- diag(degrees)
+  # calc laplacian matrix
+  L = D - W
+  return(L)
+}
+```
+
+
+#4. Plotting Spiral dataset
+
+After Laplace matrix was computed, we compute eigenvectors and select the last (smallest) $k$ eigenvectors. Finally, we apply k-means algorithm on the last $k$ eigenvectors and show final plot using 'plot' function and also we check the purity score.
+```{r}
+#laplacian matrix
+laplacian_epsilon <- CalcLaplacian(similarityGraph_epsilon)
+laplacian_direct <- CalcLaplacian(similarityGraph_direct)
+laplacian_undirect_false <- CalcLaplacian(similarityGraph_undirect_false)
+laplacian_undirect_true <- CalcLaplacian(similarityGraph_undirect_true)
+#Compute eigenvectors
+eigenVectors_epsilon <- eigen(laplacian_epsilon)
+eigenVectors_direct <- eigen(laplacian_direct)
+eigenVectors_undirect_false <- eigen(laplacian_undirect_false)
+eigenVectors_undirect_true <- eigen(laplacian_undirect_true)
+#Get last (smallest) k eigenvectors
+finalEigenvector_epsilon <- eigenVectors_epsilon$vectors[,c(length(eigenVectors_epsilon$values), length(eigenVectors_epsilon$values)-1)]
+finalEigenvector_direct <- eigenVectors_direct$vectors[,c(length(eigenVectors_direct$values), length(eigenVectors_direct$values)-1)]
+finalEigenvector_undirect_false <- eigenVectors_undirect_false$vectors[,c(length(eigenVectors_undirect_false$values), length(eigenVectors_undirect_false$values)-1)]
+finalEigenvector_undirect_true <- eigenVectors_undirect_true$vectors[,c(length(eigenVectors_undirect_true$values), length(eigenVectors_undirect_true$values)-1)]
+
+#Kmeans
+resSpectral_epsilon <- kmeans(centers = 3, finalEigenvector_epsilon, nstart = 20, iter.max = 100)
+resSpectral_direct <- kmeans(centers = 3, finalEigenvector_direct, nstart = 20, iter.max = 100)
+resSpectral_undirect_false <- kmeans(centers = 3, finalEigenvector_undirect_false, nstart = 20, iter.max = 100)
+resSpectral_undirect_true <- kmeans(centers = 3, finalEigenvector_undirect_true, nstart = 20, iter.max = 100)
+#Plot data
+plot(mydataset$x, mydataset$y, col=resSpectral_epsilon$cluster, main = "Spiral dataset - Spectral Clustering, epsilon", xlab = "x", ylab = "y")
+Purity(resSpectral_epsilon$cluster, mydataset$label)
+plot(mydataset$x, mydataset$y, col=resSpectral_direct$cluster, main = "Spiral dataset - Spectral Clustering, direct", xlab = "x", ylab = "y")
+Purity(resSpectral_direct$cluster, mydataset$label)
+plot(mydataset$x, mydataset$y, col=resSpectral_undirect_false$cluster, main = "Spiral dataset - Spectral Clustering, undirect, false", xlab = "x", ylab = "y")
+Purity(resSpectral_undirect_false$cluster, mydataset$label)
+plot(mydataset$x, mydataset$y, col=resSpectral_undirect_true$cluster, main = "Spiral dataset - Spectral Clustering, undirect, true", xlab = "x", ylab = "y")
+Purity(resSpectral_undirect_true$cluster, mydataset$label)
+```
+
+#5. Experimental results [1p]
+Summarize your experience from Spiral dataset experiment (what option is important, what option does not have influence, etc.).
+
+> : For epsilon graph, I had to lower the value of epsilon in order to achieve purity 1
+  : For both directed and unmutual undirected graph, I had to lower the value of k.. 
+  : In case of mutual undirectred graph it was not necessary and purity 1 was achieved with k=5 as well
+  : Since purity was achieved just with lowering the value of k, I did not even try to play with kmeans iterations
+
+Do the same procedure for Jain's Toy problem dataset, i.e. plot all graphs with interesting results. Also, summarize your experience from experiments (what option is impor-
+tant, what option does not have influence, etc.).
+
+```{r findTheBestk, eval=FALSE}
+#Dataset
+mydataset <- LoadDataset("jain.txt", "A.K. Jain's Toy problem")
+#Calculate Similarity matrix
+d <- CalcSimMatrix(mydataset[,1:2], sigma = 0.35) # 0.15
+```
+
+```{r}
+BuildEpsilonGraph <- function(D, e = 0.2){
+  D[D<e] <- 0
+  return(D)
+}
+```
+
+```{r}
+#Epsilon Graph
+similarityGraph_epsilon <- BuildEpsilonGraph(d, e = 0.002)
+PlotConnectedGraph(mydataset, similarityGraph_epsilon)
+```
+
+```{r}
+BuildDirectedKNNGraph <- function(D, k = 5){
+  sortedRowInds<- as.matrix(t(apply(D,1,order,decreasing = TRUE)))
+  firstKcolumnsInds <- sortedRowInds[,1:k]
+   for (i in 1:dim(D)[1]) {
+     for(j in 1:dim(D)[2]){
+        if(!is.element(j,firstKcolumnsInds[i,])){
+          D[i,j] <- 0
+        }
+      }
+   }
+  return(D)
+}
+
+```
+
+```{r}
+#Directed Graph
+similarityGraph_direct <- BuildDirectedKNNGraph(d, k = 7)
+PlotConnectedGraph(mydataset, similarityGraph_direct)
+```
+
+```{r}
+BuildUndirectedKNNGraph <- function(D, k = 5, mutual = FALSE){
+  sortedRowInds<- as.matrix(t(apply(D,1,order,decreasing = TRUE)))
+  firstKcolumnsInds <- sortedRowInds[,1:k]
+
+  for(i in 1:dim(D)[1]){
+    if(mutual){
+      for(j in 1:dim(D)[2]){
+        if(!is.element(j,firstKcolumnsInds[i,]) | !is.element(i,firstKcolumnsInds[j,])){
+           D[i,j] <- 0
+        }
+      }
+    }else{
+      for(j in 1:dim(D)[2]){
+        if(!is.element(j,firstKcolumnsInds[i,]) & !is.element(i,firstKcolumnsInds[j,])){
+           D[i,j] <- 0
+        }
+      }
+    }
+  }
+  return(D)
+}
+```
+
+```{r}
+similarityGraph_undirect_false <- BuildUndirectedKNNGraph(d, k = 10, mutual = FALSE)
+PlotConnectedGraph(mydataset, similarityGraph_undirect_false)
+
+similarityGraph_undirect_true <- BuildUndirectedKNNGraph(d, k = 8, mutual = TRUE)
+PlotConnectedGraph(mydataset, similarityGraph_undirect_true)
+```
+
+```{r}
+#laplacian matrix
+laplacian_epsilon <- CalcLaplacian(similarityGraph_epsilon)
+laplacian_direct <- CalcLaplacian(similarityGraph_direct)
+laplacian_undirect_false <- CalcLaplacian(similarityGraph_undirect_false)
+laplacian_undirect_true <- CalcLaplacian(similarityGraph_undirect_true)
+#Compute eigenvectors
+eigenVectors_epsilon <- eigen(laplacian_epsilon)
+eigenVectors_direct <- eigen(laplacian_direct)
+eigenVectors_undirect_false <- eigen(laplacian_undirect_false)
+eigenVectors_undirect_true <- eigen(laplacian_undirect_true)
+#Get last (smallest) k eigenvectors
+finalEigenvector_epsilon <- eigenVectors_epsilon$vectors[,c(length(eigenVectors_epsilon$values), length(eigenVectors_epsilon$values)-1)]
+finalEigenvector_direct <- eigenVectors_direct$vectors[,c(length(eigenVectors_direct$values), length(eigenVectors_direct$values)-1)]
+finalEigenvector_undirect_false <- eigenVectors_undirect_false$vectors[,c(length(eigenVectors_undirect_false$values), length(eigenVectors_undirect_false$values)-1)]
+finalEigenvector_undirect_true <- eigenVectors_undirect_true$vectors[,c(length(eigenVectors_undirect_true$values), length(eigenVectors_undirect_true$values)-1)]
+
+#Kmeans
+resSpectral_epsilon <- kmeans(centers = 2, finalEigenvector_epsilon, nstart = 20, iter.max = 100)
+resSpectral_direct <- kmeans(centers = 2, finalEigenvector_direct, nstart = 20, iter.max = 100)
+resSpectral_undirect_false <- kmeans(centers = 3, finalEigenvector_undirect_false, nstart = 20, iter.max = 100)
+resSpectral_undirect_true <- kmeans(centers = 3, finalEigenvector_undirect_true, nstart = 20, iter.max = 100)
+#Plot data
+plot(mydataset$x, mydataset$y, col=resSpectral_epsilon$cluster, main = "A.K. Jain's Toy problem dataset - Spectral Clustering, epsilon", xlab = "x", ylab = "y")
+Purity(resSpectral_epsilon$cluster, mydataset$label)
+plot(mydataset$x, mydataset$y, col=resSpectral_direct$cluster, main = "A.K. Jain's Toy problem dataset - Spectral Clustering, direct", xlab = "x", ylab = "y")
+Purity(resSpectral_direct$cluster, mydataset$label)
+plot(mydataset$x, mydataset$y, col=resSpectral_undirect_false$cluster, main = "A.K. Jain's Toy problem dataset - Spectral Clustering, undirect, false", xlab = "x", ylab = "y")
+Purity(resSpectral_undirect_false$cluster, mydataset$label)
+plot(mydataset$x, mydataset$y, col=resSpectral_undirect_true$cluster, main = "A.K. Jain's Toy problem dataset - Spectral Clustering, undirect, true", xlab = "x", ylab = "y")
+Purity(resSpectral_undirect_true$cluster, mydataset$label)
+```
+
+> : In case of epsilon graph, I did not even manage to achieve purity 1 - both lowering the eps value and sigma didn't work (maybe I tried wrong combinations of them)
+  : For directed graph, increasing the value of k helped
+  : For undirected graphs, I had to increase both number of clusters and the value of k, to achieve purity 1
+  : Generally, this datased was harder to optimize and needed either higher k values or higher number of clusters
+
+

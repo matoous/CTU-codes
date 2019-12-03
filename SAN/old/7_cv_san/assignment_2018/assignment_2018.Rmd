@@ -1,0 +1,136 @@
+---
+title: "Linear Regression and Feature Selection Tutorial and Assignment"
+author: "Dominik Hoftych"
+date: "November 26, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE)
+```
+
+```{r, eval=TRUE}
+rm(list = ls())
+require(glmnet)
+
+set.seed(2) # Set random seed to make the result reproducible
+
+# Load the data from file
+data <- read.csv('./data.csv', header=TRUE)
+cols = length(data)
+x<-as.matrix(data)[,seq(cols-1)]
+y<-as.matrix(data)[,cols]
+
+# Split data to train and test sets
+train_size <- floor(0.8 * nrow(data)) # Use 80% of the data for training
+train <- sample(seq_len(nrow(data)), size = train_size) # Generate indices for training data
+test <- (-train)
+
+# Tested lambda values
+lambda_grid <- 10^ seq(10 , -3 , length =200)
+```
+
+## TASK 1
+There is a methodological error in the block of code below. Find it and correct it.
+Hint: The error causes the variable lasso.coefficients contain values of
+lesser precision than what we could get from the data.
+
+```{r, eval=TRUE}
+# Fit LS
+ls.train_model <- lm(Y ~ ., data=data[train,])
+ls.prediction <- predict(ls.train_model, data[test,])
+
+# Fit LASSO 
+lasso.model <- glmnet(x[train,],y[train],alpha=1, lambda=lambda_grid, standardize=TRUE)
+lasso.cv.out <- cv.glmnet(x[train,],y[train],alpha=1)
+lasso.lambda <- lasso.cv.out$lambda.min
+plot(lasso.cv.out)
+lasso.prediction <- predict(lasso.model, s=lasso.lambda, newx=x[test,])
+lasso.coefficients <- predict(lasso.model, type="coefficients", s=lasso.lambda)
+
+print("LASSO coefficients:")
+print(as.matrix(lasso.coefficients))
+print(as.matrix(lasso.coefficients)[seq(2,cols),] != 0)
+
+# CORRECTION HERE: in order to obtain better results, use the whole dataset to train the model, which would however
+# leave us with no data left for testing
+lasso.model <- glmnet(x,y,alpha=1, lambda=lambda_grid, standardize=TRUE)
+# lasso.prediction <- predict(lasso.model, s=lasso.lambda, newx=x[test,])
+lasso.coefficients <- predict(lasso.model, type="coefficients", s=lasso.lambda)
+
+print("LASSO coefficients when trained with whole dataset:")
+print(as.matrix(lasso.coefficients))
+print(as.matrix(lasso.coefficients)[seq(2,cols),] != 0)
+
+```
+
+## TASK 2
+Implement analogous fitting method for Ridge regression.  Compute the Mean
+Squared Error for Ridge regression, LS and LASSO and compare them.
+
+```{r, eval=TRUE}
+rr.model <- glmnet(x[train,],y[train],alpha=0, lambda=lambda_grid, standardize=TRUE)
+rr.cv.out <- cv.glmnet(x[train,],y[train],alpha=0)
+rr.lambda <- rr.cv.out$lambda.min
+plot(rr.cv.out)
+rr.prediction <- predict(rr.model, s=rr.lambda, newx=x[test,])
+rr.coefficients <- predict(rr.model, type="coefficients", s=rr.lambda)
+
+# Display the coefficients and selected variables
+print("RIDGE coefficients:")
+print(as.matrix(rr.coefficients))
+print(as.matrix(rr.coefficients)[seq(2,cols),] != 0)
+```
+
+
+```{r}
+#Compute the Mean Squared Error for Ridge regression, LS and LASSO and compare them.
+mse.ls <- mean((ls.prediction-y[test])^2)
+mse.lasso <- mean((lasso.prediction-y[test])^2)
+mse.rr <- mean((rr.prediction-y[test])^2)
+cat("Least squares MST:", mse.ls)
+cat("\nLASSO MST:", mse.lasso)
+cat("\nRidge Regression:", mse.rr)
+```
+
+## TASK 3
+Assume we want LASSO to select exactly 2 variables while still minimizing
+MSE.  What is then the desired parameter lambda (with 1e-1 precission)? What are
+the variables? What is the MSE?  Check if the selected variables are the same as
+the ones exhaustive subset search would select.  You may use the `regsubsets`
+function from the `leaps` library to do this or implement the search yourself for
+subsets of size 2.
+
+```{r}
+library(leaps)
+ess <- regsubsets(Y ~ .,data = data, method = "exhaustive")
+summary(ess)
+
+# create my own lambda_grid in some range
+my_min <- min(lambda_grid)
+my_max <- max(lambda_grid[lambda_grid < 10^3])
+my_grid <- seq(from = my_min,to = my_max,by = 0.1)
+
+
+my_lasso <- cv.glmnet(x[train,],y[train],alpha=1,lambda=my_grid)
+my_lambdas <- my_lasso$lambda
+mse <- Inf
+my_lambdas_best <- 0
+
+for(x in 1:length(my_lambdas)){
+  # select only lambdas with 2 variables
+  if(my_lasso$nzero[x] == 2){
+      if(my_lasso$cvm[x] < mse){
+          mse = my_lasso$cvm[x]
+          my_lambdas_best <- my_lasso$lambda[x]
+      }
+  }
+}
+
+lasso.coefficients <- predict(my_lasso, type = "coefficients", s = my_lambdas_best)
+print("coefficients:")
+print(as.matrix(lasso.coefficients))
+print(as.matrix(lasso.coefficients)[seq(2,cols),] != 0)
+
+# As we can see, both regsubsets function and my subset search found same variables - x6 and x9.
+```

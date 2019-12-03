@@ -1,0 +1,123 @@
+---
+title: "Confirmation analysis"
+author: "Dominik Hoftych"
+date: "November 18, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list=ls())
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#load the dataset
+Load <- function(path = "potato.dat"){
+  potatoData <- read.table(path, header = FALSE)
+  colnames(potatoData) <- c("Area", "Size" ,"Temp", "Period", "Method", "Texture", "Flavor", "Moistness")
+  potatoData$Area <- as.factor(potatoData$Area)
+  potatoData$Size <- as.factor(potatoData$Size)
+  potatoData$Temp <- as.factor(potatoData$Temp)
+  potatoData$Period <- as.factor(potatoData$Period)
+  potatoData$Method <- as.factor(potatoData$Method)
+  return(potatoData)
+}
+
+source("boxTest.R")
+library(mvnormtest)
+library(MVN)
+
+#load the dataset
+potatoData <- Load()
+potatoData_method1 <- potatoData[which(potatoData[,5]==1),]
+potatoData_method2 <- potatoData[which(potatoData[,5]==2),]
+potatoData_method3 <- potatoData[which(potatoData[,5]==3),]
+potatoData_method4 <- potatoData[which(potatoData[,5]==4),]
+potatoData_method5 <- potatoData[which(potatoData[,5]==5),]
+```
+
+
+# 1. Null hypothesis
+
+H\_o = Quality of potatoes is not influenced by its cooking method.
+Level of statistical significance used for testing is \alpha = 5% = 0.05.
+
+
+
+# 2. Visualize data
+```{r}
+
+## PCA 
+pc <- prcomp(potatoData[,c(6:8)], center = TRUE,scale = TRUE)
+summary(pc)
+pca12 <- pc$x[,1:2] 
+pca12 <- cbind(pca12, potatoData[,5])
+colnames(pca12)[3] <- "Cooking method"
+
+#plot
+plot(pca12[,1], pca12[,2], col = pca12[,3],
+     main = "Potato dataset in 2d", xlab = "PCA1", ylab = "PCA2")
+
+library(ggplot2)
+# convert matrix to data frame
+pcadf <- as.data.frame(pca12)
+pcadf$`Cooking method` <- as.factor(pcadf$`Cooking method`)
+
+ggplot(pcadf, aes(x=PC1,y=PC2,color=`Cooking method`)) + ggtitle("Potato dataset in 2d") + geom_point() + scale_color_manual(values = c('red','blue', 'green','black', 'purple')) 
+
+# biplot
+biplot(pc)
+```
+
+# 3. Check assumptions
+```{r}
+# 1. independence - granted
+# 2. random sampling granted 
+# 3. Multivariate normality
+mshapiro.test(t(potatoData_method1[,c(6,7,8)]))
+mshapiro.test(t(potatoData_method2[,c(6,7,8)]))
+mshapiro.test(t(potatoData_method3[,c(6,7,8)]))
+mshapiro.test(t(potatoData_method4[,c(6,7,8)]))
+mshapiro.test(t(potatoData_method5[,c(6,7,8)]))
+
+# 4. Homogeneity of covariance matrices
+source("boxTest.R")
+BoxMTest(potatoData[,c(6,7,8)], cl = potatoData$Method)
+```
+
+
+# 4. Testing my hypothesis
+```{r}
+# MANOVA
+potato_manova <- manova(as.matrix(potatoData[,6:8]) ~ Method, data = potatoData)
+summary(potato_manova, intercept = TRUE, test = "Pillai")
+summary(potato_manova, intercept = TRUE, test = "Wilks")
+summary(potato_manova, intercept = TRUE, test = "Hotelling")
+summary(potato_manova, intercept = TRUE, test= "Roy")
+
+# ANOVA
+potato_anova_Texture <- anova(lm(as.matrix(potatoData[,6]) ~ Method, data = potatoData))
+potato_anova_Flavor <- anova(lm(as.matrix(potatoData[,7]) ~ Method, data = potatoData))
+potato_anova_Moistness <- anova(lm(as.matrix(potatoData[,8]) ~ Method, data = potatoData))
+
+# another way, result is the same
+aov_Texture <- aov(as.matrix(potatoData[,6]) ~ Method, data=potatoData)
+anova(aov_Texture)
+aov_Flavor <- aov(as.matrix(potatoData[,7]) ~ Method, data=potatoData)
+anova(aov_Flavor)
+aov_Moistness <- aov(as.matrix(potatoData[,8]) ~ Method, data=potatoData)
+anova(aov_Moistness)
+```
+
+
+# 5. Summary
+
+According to observed value of the tested statistics with level of statistical significance \alpha = 5% = 0.05, we deny the null hypothesis in behalf of the alternative hypothesis. The conclusion is that the cooking method influences at least one criterium that is used to evaluate the quality of potatoes.
+
+
+
+
+
+
+
+
+
