@@ -2,6 +2,12 @@
 
 Homeworks and codes for CTU
 
+# Disclaimer
+
+Do not copy any of the code here! This code is for educational purposes, not for you to get free points in subjects.
+
+## About
+
 You can find much more (KIR dropbox + a lot of my personal additinons) on [DRIVE](https://drive.google.com/open?id=0B33G3DM4Z57yLWRrcVpWTnBIdUE)
 
 Hello fellow students! I hope you find everything that you need in here. I wish you pleasent studies.
@@ -28,8 +34,8 @@ e-mail:   dzivjmat@fel.cvut.cz
 
 **ZUI** - Zaklady umele inteligence
 
+**PJC** - Programování v Jazyku C
+
+**SAN** - Statistická Analýza Dat
+
 :fire:
-
-### VS-code-extensions.txt
-
-I added file with VS code extensions that I use and you might like them and find them useful too
