@@ -31,3 +31,4 @@ if echo "$DATA" | # pass data in pipe |
 else
   exit $?
 fi
+

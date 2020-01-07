@@ -1,6 +1,6 @@
 # CTU - codes
 
-Homeworks and codes for CTU
+Homeworks and codes for CTU - Open Informatics
 
 # Disclaimer
 
@@ -8,11 +8,14 @@ Do not copy any of the code here! This code is for educational purposes, not for
 
 ## About
 
+_disclaimer_
+
 You can find much more (KIR dropbox + a lot of my personal additinons) on [DRIVE](https://drive.google.com/open?id=0B33G3DM4Z57yLWRrcVpWTnBIdUE)
 
-Hello fellow students! I hope you find everything that you need in here. I wish you pleasent studies.
-
-e-mail:   dzivjmat@fel.cvut.cz
+Hello fellow students!
+I hope you find everything that you need in here.
+I wish you pleasent studies.
+If in need, feel free to contact me at: dzivjmat@fel.cvut.cz or matous.dzivjak@kiwi.com
 
 **PRP** - Procedurální programování
 
@@ -37,5 +40,9 @@ e-mail:   dzivjmat@fel.cvut.cz
 **PJC** - Programování v Jazyku C
 
 **SAN** - Statistická Analýza Dat
+
+**BSY** - Bezpečnost Systémů
+
+**PST** - Pokročilé Síťové Technologie
 
 :fire:
