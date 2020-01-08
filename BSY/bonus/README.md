@@ -1,6 +1,6 @@
 # Solution for BSY Bonus homework
 
-This paper describes the solution to BSY bonus homework with all the stages,
+This paper describes the solution for BSY bonus homework with all the stages,
 commands and tools used.
 
 ## Stage 1.
@@ -40,7 +40,7 @@ Filtering by `dns` showed bunch of queries that appered to be mostly normal.
 `http` showed a few results that were from chrome browser extension, nothing
 fishy there either.
 
-![alt text](http_trafic.png "HTTP traffic")
+![alt text](http_traffic.png "HTTP traffic")
 
 We played around a bit, filtering out things that didn't yield any results
 such as the previously mentiones dns and http traffic, we further filtered
