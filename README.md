@@ -58,6 +58,10 @@ I recommend you take a look at the cool tools that might help you with programmi
 [here](tools.md). There's also a load of materials on the [gdrive](https://drive.google.com/open?id=0B33G3DM4Z57yLWRrcVpWTnBIdUE).
 If you have more to add, feel free to contact me!
 
+## Bachelor and Masters degree examination
+
+You can find materials for learning [here](https://github.com/matoous/oi-bszz).
+
 ## About this repository
 
 _disclaimer_
