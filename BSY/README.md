@@ -11,9 +11,10 @@
 **Survey**: [2018/2019](https://www.fel.cvut.cz/cz/anketa/archiv/anketa.B181/courses/B4M36BSY/index.html)\
 **Lecturers**:
 
-- Josef Liska [mail](mailto:josef.liska@virtualmaster.com)
-- Balasz Kutil [mail](mailto:balazs@kutilovi.cz)
-- Jan Stercl [mail](mailto:stercl.jan@gmail.com)
+- Ing. Maria Rigaki [mail](mailto:rigakmar@fel.cvut.cz)
+- Ing. Sebastián García, Ph.D. [mail](mailto:garciseb@fel.cvut.cz)
+- doc. Ing. Tomáš Pevný, Ph.D. [mail](mailto:pevnytom@fel.cvut.cz)
+- Bc. Ondřej Lukáš [mail](mailto: lukasond@fel.cvut.cz)
 
 ### Description
 
@@ -37,3 +38,9 @@ After the course, you should be able to find information sources related to your
 1. Presence on labs are mandatory with at most one absence.
 2. Presentation in relaxed PechaKucha format (up to 20 slides, 6:40 minutes, https://www.pechakucha.org/) + 2 homeworks.
 3. The course will be closed by a combination of written and oral exam.
+
+### Materials
+
+Materials for labs are in following [GDrive Folder](https://drive.google.com/drive/folders/18ThVgE3EboGPKCgT4pQyy3BcmeVmKgnm).
+
+Lectures are on [moodle](https://moodle.fel.cvut.cz/course/view.php?id=4220).
