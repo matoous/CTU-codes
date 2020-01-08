@@ -14,7 +14,7 @@
 - Ing. Maria Rigaki [mail](mailto:rigakmar@fel.cvut.cz)
 - Ing. Sebastián García, Ph.D. [mail](mailto:garciseb@fel.cvut.cz)
 - doc. Ing. Tomáš Pevný, Ph.D. [mail](mailto:pevnytom@fel.cvut.cz)
-- Bc. Ondřej Lukáš [mail](mailto: lukasond@fel.cvut.cz)
+- Bc. Ondřej Lukáš [mail](mailto:lukasond@fel.cvut.cz)
 
 ### Description
 
