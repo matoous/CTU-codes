@@ -1,21 +1,20 @@
-# ALG
+# B4B33ALG
 
-All homeworks passed pretty fine with full points, except 04, didn't have time to fix it.
+## B4B33ALG - Algoritmizace
 
-1. O(n^2)
+### Information
 
-2. recursion
+**Courseware**: https://cw.fel.cvut.cz/wiki/courses/b4b33alg/start \
+**Moodle**: -\
+**Evaluation**: 8 homeowrks, practical and theoretical exam\
+**Exam**: practical (programming) and theoretical part\
+**Survey**: [2018/2019](https://www.fel.cvut.cz/cz/anketa/archiv/anketa.B181/courses/B4B33ALG/index.html)\
+**Lecturers**:
 
-3. BFS
+- Marko Genyk-Berezovskyj [mail](mailto:berezovs@fel.cvut.cz)
 
-4. BFS/DFS and more
+### Description
 
-5. BST/BFS
+### Evaluation
 
-6. AVL
-
-7. DP, recursion, strings
-
-8. DP, ez
-
-Your homeworks will probably differ so you might find some inspiration here but probably not more.
+### Materials
