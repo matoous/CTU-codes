@@ -87,6 +87,8 @@ If in need, feel free to contact me at: dzivjmat@fel.cvut.cz or matous.dzivjak@k
 
 [**OSY**](OSY) - Operační systémy *(C, Bash and other shiat)*
 
+[**IBEA**](IBEA) - Informační bezpečnost
+
 [**ALG**](ALG) - Algoritmizace *(C++)*
 
 [**ZUI**](ZUI) - Zaklady umele inteligence
