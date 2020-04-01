@@ -1,0 +1,359 @@
+---
+title: "suicide"
+author: ""
+date: "12/15/2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+load(file = "suicide.RData")
+
+library(ggplot2)
+library(tidyverse)
+library(nortest)
+library(caret)
+
+```
+
+####################
+# Exploracni analyza #
+####################
+
+V explorační analýze byly vykresleny grafy proměnných vzhledem k časové ose. Cílem bylo zobrazit trend míry sebevražd (počet sebevražd na 100 000 obyvatel) dle různých atributů.
+Informace vydedukované z grafů byly pak použity ke zformování hypotéz.
+
+```{r pressure, echo=FALSE}
+
+# jaka skupina mela celkove nejvyssi pocet sebevrazd
+which(data == max(data[,5]), arr.ind = TRUE)
+# Russian federation 1994, male 35-54
+# Rusko v roce 1994 mělo mimochodem nejvyšší 
+# míru sebevražd ze všech (lze zkontrolovat dole)
+
+# počty sebevražd za celý rok
+data %>% group_by(year) %>% summarize(num_suicide = sum(suicides_no)) %>% arrange(desc(num_suicide))
+
+# Celkový počet sebevražd in timeline
+data %>%
+  group_by(year) %>%
+  summarize(suicide_rate = sum(suicides_no)) %>%
+  ggplot(aes(x=year, y=suicide_rate)) + geom_line()
+
+# míra sebevražd in timeline
+data %>%
+  group_by(year) %>%
+  summarize(suicide_rate = sum(suicides_no) / (sum(population) / 100000)) %>%
+  ggplot(aes(x=year, y=suicide_rate)) + geom_line(aes(col=suicide_rate))
+
+# dle pohlaví - trend
+data %>%
+  group_by(year, sex) %>%
+  summarize(suicide_rate = sum(suicides_no) / (sum(population) / 100000)) %>%
+  ggplot(aes(x=year, y=suicide_rate)) + geom_line(aes(col=sex))
+# muži jsou na tom o dost hůř
+
+# dle pohlaví - histogram
+data %>%
+  group_by(sex) %>%
+  summarize(suicide_rate = sum(suicides_no)/(sum(population)/100000)) %>%
+  ggplot(aes(x=sex, y=suicide_rate)) + geom_col()
+
+# dle kontinentu
+data %>%
+  group_by(year, continent) %>%
+  summarize(suicide_rate = sum(suicides_no) / (sum(population) / 100000)) %>%
+  ggplot(aes(x=year, y=suicide_rate)) + geom_line(aes(col=continent))
+
+# dle vekove skupiny
+data %>%
+  group_by(year, age) %>%
+  summarize(suicide_rate = sum(suicides_no) / (sum(population) / 100000)) %>%
+  ggplot(aes(x=year, y=suicide_rate)) + geom_line(aes(col=age))
+# people die in their primes so sad :(
+
+# dle generace
+data %>%
+  group_by(year, generation) %>%
+  summarize(suicide_rate = sum(suicides_no) / (sum(population) / 100000)) %>%
+  ggplot(aes(x=year, y=suicide_rate)) + geom_line(aes(col=generation))
+# počítat s tím, že každá generace byla v jiné etapě 
+
+
+# zemí je hrozně moc, takže je zbytečný dělat plot
+# míra sebevražd za země v tabulce
+data %>%
+  group_by(country) %>%
+  filter(year==1990) %>%
+  summarize(suicide_rate = sum(suicides_no) / (sum(population) / 100000)) %>%
+  arrange(desc(suicide_rate)) %>% head(10)
+# je zajímavý sledovat celkovou míru i míru za jednotlivé roky
+
+
+# vytvoreni miry sebevrazd
+data$suicides.100k.pop <- data %>% mutate(suicides_no / (population/ 100000)) %>% pull()
+
+```
+
+Nejvyšší počet sebevražd měli celkově Rusové v roce 1994, ve věkovém rozmězí 35-54 let. Rusko mělo v roce 1994 také nejvyšší míru sebevražd ze všech států.Z roků měl nejvyšší počet sebevražd rok 1999 s celkovým 256119 počtem úmrtí. Z pohlaví vycházejí muži 3x - 4x hůře než ženy.	Z kontinentů vychází nejhůře Evropa. Trendová přímka Afriky naznačuje, že mohlo pravděpodobně dojít ke změně metodiky sběru dat (podezřele radikální změna v míře sebevražd). Asie, která je známá svou vysokou mírou sebevražd je také poměrně vysoko, i když ne tolik, jak bych očekávala. Při vykreslení histogramu rozložení míry sebevražd Asiatů jsem vykoukala, že asijské ženy se zřejmě zabíjejí více (viz histogram v hypotéze) a podle toho jsem se inspirovala ke zformování hypotéz.
+Trend mezi věkovými skupinami je velmi podobný, přestože je značný rozdíl mezi tím, kde přímky začínají - vyšší věkové skupiny mají vyšší míru sebevražd. Podobně jsou na tom generace - starší generace jsou náchylnější k vyšší míře sebevražd.
+
+funfact: Česko bylo v roce 1990 na 8. místě.
+
+####################
+# Hypotezy #
+####################
+
+## H1: Míra sebevražd je vyšší v zemích, které mají vyšší HDP.
+První hypotéza vznikla na základě myšlenky, že čím bohatší jsou lidé, tím více budou jejich problémy psychického rázu. GDP je společné pro všechny skupiny, v jednom státě a roce.
+```{r}
+ad.test(data$suicides.100k.pop)
+ad.test(data$gdp_per_capita)
+
+# Pouze za rok 2015, aby vysledek nebyl ovlivnen vyvojem HDP v letech
+data2 <- data %>% filter(year==2015)
+
+# Vykresleni grafu, abych se podivala, jestli jsou data normalniho rozdeleni
+data2 %>% ggplot(aes(x=suicides.100k.pop)) + geom_histogram()
+data2 %>% ggplot(aes(x=gdp_per_capita)) + geom_histogram()
+# Data jsou velmi skewed a opravdu nemuzu rict, ze jsou aspon trochu normalni
+
+# Data nepochazi z normalniho rozdeleni -> neparametricky koeficient -> spearman
+cor.test(data2$suicides.100k.pop, data2$gdp_per_capita, method = "spearman")
+# Velmi nizka hladina korelace -> neexistujici vztah mezi GDP per capita a mirou sebevrazd
+```
+Data nepochází z normálního rozdělení a kvůli tomu je použit Spearmanův test. Vychází velmi nízká hladina korelace, což naznačuje, že asi neexistuje vztah mezi GDP per capita a mírou sebevražd (p-value naznačuje, že je to statisticky významné - musíme ovšem počítat s tím, že neparametrické testy jsou slabší).
+
+Hypotéza byla počítána za konkrétní rok. Důvodem je odproštění se od vývoje státu během let - dochází ke změně velké řady ukazatelů, které se ani nemusí nacházet v datasetu, ale výrazně ovlivňují parametry jako HDP, populace, atd.  
+
+## H2: Ženy v Asii mají větší sklon k sebevraždám než ženy v jiných oblastech
+
+Z histogramů distribuce je vidět, že asijské ženy mají míru sebevražd více rozloženou doprava, než ženy ze zbytku světa.
+
+```{r}
+
+# 2 samples - zeny z Asie a zeny z jinych oblasti
+
+asian_women <- data %>% filter(sex=="Female", continent=="Asia")
+other_women <- data %>% filter(sex=="Female", continent!="Asia")
+
+# Histogramy - rozlozeni
+asian_women %>% ggplot(aes(x=asian_women$suicides.100k.pop)) + geom_histogram()
+other_women %>% ggplot(aes(x=other_women$suicides.100k.pop)) + geom_histogram()
+
+# Shapiro test
+shapiro.test(asian_women$suicides.100k.pop) # p-value je mensi - neni z normalniho rozdeleni
+#shapiro.test(other_women$suicides.100k.pop) # tenhle sample je moc velky
+
+# t-test je parametricky test, mel by byt pouzivan na normalne rozdelena data
+# a tohle nejsou normalne rozdelena data
+# ale pak ty means jsou normalne rozdeleny
+t.test(asian_women$suicides.100k.pop, other_women$suicides.100k.pop)
+
+# neparametrickym protejskem je Wilcoxuv test, ktery je slabsi, ale
+# lze porusit predpoklady normality
+# neparametricky test na means of idependent samples, not paired
+wilcox.test(asian_women$suicides.100k.pop, other_women$suicides.100k.pop)
+```
+Data nemají normální rozdělení, a proto byly provedeny dva testy, t-test a jeho neparametrická alternativa, Wilcoxonův test. Wilcoxonův test tu je pro srovnání, jelikož t-test předpokládá normalní rozdělení dat. t-test nicméně stejně použijeme, protože střední hodnoty by nakonec měly být normálně rozdělené. V t-testu vyšlo na hladině významnosti 0.05, že zamítáme, že střední hodnoty skupin jsou stejné, tedy nezamítame hypotézu, že asijské ženy mají vyšší sklon k sebevraždám.
+
+Wilcoxonův test vyšel s p-value vyšší než hladina významnosti, a tedy nezamítáme, že střední hodnoty skupin jsou stejné.
+Testy sice říkají přesný opak, ale střední hodnoty se liší pouze o kousek (ale asijské ženy mají stále vyšší střední hodnotu). Proto je možné, že Wilcoxonův test považuje takový rozdíl za nevýznamný. Neparametrické testy jsou taky slabší než parametrické.
+
+# H3: Míra sebevraždy ve věkové skupině 15-24 je vyšší v Asii než jinde
+
+Provádí se ty samé testy jako pro H2. Opět vidíme, že histogram pro asijské děti je více rozložený.
+
+```{r}
+
+asian_children <- data %>% filter(age=="15-24", continent=="Asia")
+other_children <- data %>% filter(sex=="Female", continent!="Asia")
+
+shapiro.test(asian_children$suicides.100k.pop) # p-value je mensi - neni z normalniho rozdeleni
+
+# Histogram
+asian_children %>% ggplot(aes(x=asian_children$suicides.100k.pop)) + geom_histogram()
+other_children %>% ggplot(aes(x=other_children$suicides.100k.pop)) + geom_histogram()
+
+t.test(asian_children$suicides.100k.pop, other_children$suicides.100k.pop)
+
+# neparametricky test na means of idependent samples, not paired
+wilcox.test(asian_children$suicides.100k.pop, other_children$suicides.100k.pop)
+```
+Už z grafu je znát větší rozdíl než v předešlé hypotéze. Zde lze vyčíst, že se střední hodnoty liší o dost více než u asijských žen. Zde už se oba testy shodly a zamítají, že by střední hodnoty mezi skupinami byly stejné a nezamítáme, že se v Asii tato věková skupina zabíjí více než jinde.
+
+# H4: Střední hodnota se nemění mezi věkovými skupinami
+
+```{r}
+data_by_age <- split(data, data$age)
+
+# cute boxplot, abychom videli, ze mame asi pravdu
+ggplot(data, aes(x=data$age, y=data$suicides.100k.pop, color=data$age)) + geom_boxplot()
+# ty means se moc nehybou, takze mame asi pravdu
+
+# udelej kruskalluv test, protoze anova assumptions were not met
+# ale neni tak stronk :(
+kruskal.test(lapply(split(data, data$age), function(x) { x$suicides.100k.pop }))
+# p-value je mensi nez hladina vyznamnosti
+
+
+```
+Byl použit Kruskal-Wallis test, který je neparametrickou alternativou k anově (protože nebyly splněny předpoklady normality). p-value je menší než hladina významnosti 0.05, tedy zamítáme, že střední hodnoty skupin jsou stejné.
+
+###############
+# Pre-process #
+###############
+
+```{r}
+
+#####
+# Selekce atributu k pouziti v modelu + shuffle + stratifikovany sampling + factor reduction
+#####
+
+## Prevod na klasifikacni ulohu pro nektere alg ##
+# Prevod miry sebevrazd na intervaly, vytvoreno 5 binu (kvantily 0 - 100, krok po 20 %)
+data$bin <- data$suicides.100k.pop %>%
+  cut(include.lowest=TRUE, breaks=quantile(data$suicides.100k.pop, probs = seq(0,1,0.2)))
+# data$bin <- discretize(data$suicides.100k.pop, method="frequency", breaks=5)
+
+# Pocatecni manualni vyber faktoru + classes
+train_data <- data %>% select(country, age, year, sex, generation, gdp_per_capita, bin, suicides.100k.pop, continent)
+
+# Remove rows with missing data
+train_data <- na.omit(train_data)
+
+# Stratifikovany sampling
+train_data <- train_data[sample(nrow(train_data)),] %>% group_by(bin) %>% filter(row_number() <= 200) %>% ungroup
+train_classes <- train_data$bin
+train_classes_cont <- train_data$suicides.100k.pop
+
+# Odstraneni classes z trenovacich dat
+train_data <- train_data %>% select(-c(bin, suicides.100k.pop))
+
+# Odstraneni zero a near-zero variance promennych
+nzv <- nearZeroVar(train_data)
+if (length(nzv) != 0) {
+  train_data <- train_data[, -nzv]
+}
+
+# Odstraneni vysoce korelovanych promennych
+hcor <- findCorrelation(cor(mutate_if(train_data, is.factor, as.numeric)), cutoff=.75)
+if (length(hcor) != 0) {
+  train_data <- train_data[, -hcor]
+}
+
+# Odstraneni linearne zavislych promennych (linearnich kombinaci)
+lin_comb <- findLinearCombos(mutate_if(train_data, is.factor, as.numeric))$remove
+if (length(lin_comb) != 0) {
+  train_data <- train_data[, -lin_comb]
+}
+
+# Prevod z tibble na data.frame, tibble obcas dela problemy caret algoritmum
+train_data <- as.data.frame(train_data)
+
+# Prevedeni vsech atributu na numericke pro algoritmy, ktere to vyzaduji
+train_data_numeric <- train_data %>% mutate_if(is.factor, as.numeric) %>% as.data.frame()
+
+
+# VOLITELNE: centrovani a normalizace, lze i PCA
+# !!!!!!!!!
+# !!! POZOR - pri pouziti skalovani pote neni mozno predikovat neznamy neskalovany zaznam !!!
+# !!!!!!!!!
+# train_data <- mutate_if(train_data, is.numeric, scale)  # pouze normalizace, ale jednodussi usage
+preproc <- preProcess(train_data, method=c("center", "scale"))  # pro PCA staci pridat "pca", ale ztrati se nazvy sloupcu, s pca to ma horsi vysledky
+train_data <- predict(preproc, train_data)
+
+# Transformace dat
+library(e1071)
+skewness(data$suicides.100k.pop) # skewness je 2.9 (highly-skewed)
+normalized_suicides <- log10(data$suicides.100k.pop + 1) # +1, protoze log(0) je undefined
+plot(density(normalized_suicides))
+# po plotovani density jsme zjistili, ze transformace vubec nepomohla >:(
+
+```
+
+#####
+# Trenovani a testovani modelu
+#####
+Byly natrénovány jak klasifikační, tak regresní modely. Vyskytují se tam ty, které se probíraly v rámci kurzu (qda, lda, gam, lm, lasso), tak i složitější jako neuronové sítě, random forest atd. Klasifikační algoritmy jsou mezi sebou porovnávány v rámci accuracy, regresní v rámci RMSE. K otestování se používá 10-fold cross-validation. Kromě toho, jak se předzpracovaly data v předešlé části  ještě některé z algoritmů dělají vnitřně vlastní feature selection.
+Vzhledem k velikosti datasetu bylo potřeba kvůli některým z algoritmů udělat sampling, protože by mi bouchnul počítač (což ale ovlivňuje výkon algoritmů).  
+
+###
+# Klasifikacni modely
+###
+```{r}
+models <- c("gam", "lda2", "ctree", "nnet", "xgbTree", "rf", "naive_bayes", "qda")
+needs_numeric <- c("gam", "lda2", "xgbTree", "rf", "naive_bayes", "qda")
+results <- c()
+
+# WARNING: Nasledujici segment natrenuje shit ton of classification models, so you might not want to do that
+
+# for (i in 1:length(models)) {
+#   
+#   if (models[i] %in% needs_numeric) {
+#     model_data <- train_data_numeric
+#   } else {
+#     model_data <- train_data
+#   }
+#   if (models[i]=="nnet") {
+#     model <- train(model_data, train_classes, method=models[i], trControl = trainControl(method="cv", number=10, allowParallel = TRUE), tuneLength=3, trace = FALSE)
+#   } else {
+#     model <- train(model_data, train_classes, method=models[i], trControl = trainControl(method="cv", number=10, allowParallel = TRUE), tuneLength=3)
+#   }
+#   # ggplot(varImp(model)) # nejvetsi faktory: sex & age, obcas country
+#   results <- rbind(results, c(models[i], mean(model$resample$Accuracy)))
+# }
+# colnames(results) <- c("Model", "Accuracy")
+# results[order(results[,2], decreasing = TRUE),] # serazeno od nejvyssi acc
+
+# # nejlepsi klasifikacni vysledky
+# class_res <- readRDS("classification_results")
+```
+pozn: Do neuronky a do ctree se dávaly jako jediné kategorické proměnné, do zbytku se dávaly převedené na čísla. 
+
+Nejhůř dopadly modely gam, lda což se dalo očekávat vzhledem k jednoduchosti algoritmů. Dále na tom nebyl tak dobře naivní bayes, který má silný naivní předpoklad, že jsou features nezávislé, což ho dost často omezuje. Nejlépe na tom byla neuronová síť, poté random forest a pak extreme gradient boosting trees.   
+###
+# Regresni modely
+###
+
+```{r}
+models <- c("lm", "gam", "nnet", "xgbTree", "rf", "lasso", "svmPoly")
+results_reg <- c()
+
+# WARNING: Nasledujici segment natrenuje shit ton of regression models, so you might not want to do that either
+
+# for (i in 1:length(models)) {
+#   if (models[i] == "nnet") {
+#     model <- train(train_data_numeric, train_classes_cont, method=models[i], trControl = trainControl(method="cv", number=10, allowParallel = TRUE), tuneLength=3, trace = FALSE)
+#   } else {
+#     model <- train(train_data_numeric, train_classes_cont, method=models[i], trControl = trainControl(method="cv", number=10, allowParallel = TRUE), tuneLength=3)
+#   }
+#   results_reg <- rbind(results_reg, c(models[i], mean(model$resample$RMSE)))  # pripadne Rsquared nebo MAE
+# }
+# colnames(results_reg) <- c("Model", "RMSE")
+# results_reg[order(results_reg[,2]),] # serazeno od nejnizsiho rmse
+
+# reg_res <- readRDS("regression_results")
+# nejlepsi regresni vysledky
+
+# dostupne modely: names(getModelInfo())
+# modely lze ulozit a nahrat pomoci funkci saveRDS a readRDS
+```
+
+
+Je zajímavé, že neuronka měla nejvyšší accuracy u klasifikace, ale největší RMSE u regrese. Měli bychom ovšem počítat s tím, že převedením úlohy rozdělením do binů se možná snížila přesnost a accuracy nemusí být úplně vypovídající. Použití kategorické/numerické proměnné také mohlo ovlivnit výkon. Dle očekávání jednodušší algoritmy neměly příliš dobré výsledky.
+Algoritmy random trees a xgb trees měly nejlepší výsledky, což není překvapením, jelikož se z toho důvodu velmi často v praxi používají.
+Při odendání některých proměnných se RMSE i accuracy snížila - v regresní části si často vedl nejlépe SVM (zřejmě kvůli tomu, že dobře generalizuje).
+
+# Závěrečná diskuze #
+Tento dataset byl zajímavý z hlediska zjištění nějakých krizových skupin, zemí, ovlivnění krize na míru sebevražd atd. V rešerši jsem ovšem ještě nenarazila na výzkum, který by tento jev dokázal spolehlivě predikovat, i když se jednalo přímo o predikci sebevraždy podle množiny nějakých emocí jednoho člověka.
+
+Mnoho článků (spíše psychologického rázu) souhlasí s problémem vysoké míry sebevražd žen i dětí-adolescentů v Asii. To je způsobeno přetrváváním velmi silného patriarchismu a náporu na vzdělání/jiné skillsety u asijských dětí. Podle WHO tabulky z roku 2016-2000 (na 100k obyvatel) je suicide female rate v jihovýchodní Asii nejvyšší ze všech zmíněných regionů (http://apps.who.int/gho/data/view.main.MHSUICIDEREGv?lang=en).
+Podle WHO se 79 % sebevražd dějí v low-middle-income zemí, což vyvrátilo myšlenku, dle které jsem dělala H1 (https://www.who.int/news-room/fact-sheets/detail/suicide).
+
+Z tohoto datasetu nejde zjistit nic ohledně příčiny vysoké míry sebevražd. Také by bylo zajímavé mít nějakou úroveň vzdělání v dané zemi, kriminalitu, státní uspořádání, obecně nějaké indexy, např. životní úrovně.  
+
+
