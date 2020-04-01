@@ -1,0 +1,162 @@
+---
+title: "Assignment 1: Regression"
+output:
+  html_document:
+    df_print: paged
+---
+
+This is the first assignment of B4M36SAN in 2019.
+Write your solution directly into this document and submit it to BRUTE.
+The deadline is 28.9.2019.
+
+First of all go through the code and fill the missing part (0.5 points).
+
+```{r prepare, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+library("MASS") # Includes the Boston dataset
+library("formula.tools") # Contains a helper function
+library("gam") # Generalized additive models
+library("ggplot2")
+
+# Set a fixed random seed for measurement replicability
+ 
+testMeanSquareError = function(modelType, modelStruct, dataset) {
+  set.seed(7) 
+  datasetSize <- nrow(dataset)
+  sampleSize <- floor(0.8 * datasetSize) # sampleSize je 80 % velikosti datasetu
+  
+  trainIndices <- sample(seq_len(datasetSize), size = sampleSize) #seq_len() vytvori sekvenci of length datasetu
+  trainSet <- dataset[trainIndices, ]
+  testSet <- dataset[-trainIndices, ]
+  fit <- modelType(modelStruct, data = trainSet)
+  independentVariable <- formula.tools::lhs(modelStruct)
+  
+  predictions <- predict(fit, testSet)
+  groundTruth <- getElement(testSet, independentVariable)
+  MSE <- sum((groundTruth - predictions)^2)/(nrow(testSet))
+  MSE
+}
+```
+
+We will attempt to predict the `medv` variable in the Boston dataset using the `lstat` and `rm` variables.
+
+
+Example usage of the function, to estimate the error of a linear model:
+
+
+```{r}
+testMeanSquareError(lm, medv ~ lstat + rm, Boston)
+
+ggplot(Boston, aes(lstat, medv) ) + geom_point() + stat_smooth() # Vizualizace dat z celeho Boston datasetu (pouze se 2 promennymi)
+
+ggplot(Boston, aes(lstat, rm) ) + geom_point() # vizualizace lstat a rm pro zjisteni nejakeho vztahu mezi nimi
+
+# LSTAT - % lower status of the population
+# MEDV - Median value of owner-occupied homes in $1000's
+# RM - average number of rooms per dwelling
+
+```
+
+Construct and measure the performance of the following models (include your code in this document, 2 points):
+
+1. The linear model above
+```{r}
+linearModel <- testMeanSquareError(lm, medv ~ lstat + rm, Boston)
+# aes - mapovani atributu vuci grafu
+ggplot(Boston, aes(rm, medv)) + geom_point() + stat_smooth(method = lm, formula = y ~ x) # plot linearniho modelu medv a rm
+ggplot(Boston, aes(lstat, medv)) + geom_point() + stat_smooth(method = lm, formula = y ~ x) # plot medv a lstat 
+
+```
+
+2. A model polynomial in one variable and linear in the other (Determine a suitable polynomial degree >= 2)
+```{r}
+poly <- lm(medv ~ poly(rm, 5, raw = TRUE) + lstat, data = Boston)
+summary(poly)
+
+ggplot(Boston, aes(rm, medv) ) + geom_point() + stat_smooth(method = lm, formula = y ~ poly(x, 5, raw = TRUE)) # plot rm a medv
+ggplot(Boston, aes(lstat, medv) ) + geom_point() + stat_smooth(method = lm, formula = y ~ poly(x, 5, raw = TRUE)) # lstat a medv
+
+testMeanSquareError(lm, medv ~ poly(lstat, 5, raw = TRUE) + rm, Boston)
+
+polyLinearModel <- testMeanSquareError(lm, medv ~ poly(rm, 5, raw = TRUE) + lstat, Boston) 
+# polynom 5 vychazi nejlepe, co se tyce MSE a promenna rm vic pozitivne ovlivnuje MSE, nez lstat
+# coz je ocekavane podle toho, jak vypadala data visualizovana nahore
+
+```
+
+3. A model polynomial in both variables (Determine a suitable polynomial degrees >= 2)
+
+```{r}
+polynomialModel <- testMeanSquareError(lm, medv ~ poly(lstat, 9, raw = TRUE) + poly(rm, 9, raw=TRUE), Boston) 
+
+poly2 <- lm(medv ~ poly(rm, 9, raw = TRUE) + poly(lstat, 9, raw=TRUE), data = Boston)
+summary(poly2) # summary 2 - polynom stupne 9 ma sice nejmensi MSE, ale ma hodne "nevyznamnych" clenu
+# je mozny, ze overfittuje
+
+
+```
+
+4. A model polynomial in both variables that clearly overfits, but still try to keep the degrees as low as possible.
+```{r}
+overfittingPolyModel <- testMeanSquareError(lm, medv ~ poly(lstat, 9, raw = TRUE) + poly(rm, 9, raw=TRUE), Boston)
+# Polynom 6 MSE = 18.998, polynom 7 MSE = 19.122
+
+```
+5. A generalized additive model (gam) using natural spline for one variable and linear function for the other (Use the same degree as in 2.)
+```{r}
+linGam <- testMeanSquareError(gam, medv ~ ns(lstat,5) + rm, Boston)
+
+```
+
+6. A generalized additive model (gam) using natural spline for both variables. (Use the same degrees as in 3)
+```{r}
+fullGam <- testMeanSquareError(gam, medv ~ ns(lstat,9) + ns(rm,9), Boston)
+```
+
+7. A linear combination of natural splines in either variables (Determine a suitable degrees >= 2)
+```{r}
+linearCombination <- testMeanSquareError(lm, medv ~ (ns(lstat,9) + ns(rm,9)), Boston)
+```
+
+8. Some other kind of model that you choose.
+```{r}
+logPolyModel <- testMeanSquareError(lm, medv ~ log(lstat) + poly(rm, 5), Boston)
+ggplot(Boston, aes(lstat, rm) ) + geom_point() + stat_smooth(method = lm, formula = y ~ log(x))
+
+# Pokus o snížení MSE, když budu následovat vizualizaci dat.
+# Finální MSE: 19.47
+
+```
+
+```{r}
+dataPrint<- c(linearModel,polyLinearModel,polynomialModel,overfittingPolyModel,linGam,fullGam,linearCombination,logPolyModel)
+dataPrint
+```
+
+Answer the following questions (write the answers into this document, 2.5 points):
+
+1. Which model had the best measured performance?
+
+Polynomialni model
+
+2. Is the best model relatively simple or complicated among the other models? 
+
+Tento konkrétní model je příliš komplikovaný, jelikož má stupeň 9.
+
+3. Did the GAM models perform better than the polynomial ones? Explain why you think it was or was not the case. 
+
+Obecně na tom GAM modely byly trochu hůř, ale ne o moc (kromě gam, kde byl jeden člen lineární, který byl výrazně horší). Nelze se orientovat pouze podle MSE kvůli malému množství dat, kterých je ještě míň rozdělením na trénovací a testovací. Je to zřejmé hlavně u polynomů, při kterých se MSE měnilo bizardním způsobem při změně seedu. Polynomy jsou jinak obecně méně stabilní a hlavně by se neměl používat tak vysoký řad. 
+
+4. For the models that did not perform well, give an explanation why it was the case.
+
+Při vizualizaci dat je zřejmé, že je lineární model příliš jednoduchý, aby se mu dařilo dobře.
+
+5. Discuss briefly: What would change if we used cross-valiadation instead of a simple train/test measurement?
+
+Viz odpověď u otázky 3., cross-validace by nám dala možnost objektivněji posoudit, zda si model orpavdu vede dobře a je vhodný pro tento set dat. 
+
+6. Is the difference between the best and the other models large? Is the difference statistically significant? Propose a method that works with an interval error estimate.
+
+Největší je rozdíl má "nejlepší" model s lineárním modelem, pak také s modelem gam, který má lineární složku. Se zbytkem rozdíl není příliš velký. Jak již bylo zmíněno, pouze na MSE se nelze spolehnout, MSE se liší často o málo a výsledek se odlišuje pokaždé, když je vygenerován nový seed. Jinak bych statistickou významnost rozdílů v MSE zjistila pomocí t-testu. 
+
+
+

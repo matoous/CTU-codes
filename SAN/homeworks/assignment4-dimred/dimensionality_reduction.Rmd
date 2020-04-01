@@ -1,0 +1,225 @@
+---
+title: "Dimensionality reduction"
+author: ""
+date: "17 listopadu 2019"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The goal of this tutorial is to get familiar with some basic methods for dimensionality
+reduction, complete you own implementation of the **Isomap algorithm** (in cooperation with *Multidimensional scaling*), experiment with its parameters and compare with other techniques of dimensionality reduction (**PCA**, **t-SNE**).
+
+## Background
+
+The data you will be working with are vector representations of words in a latent (unknown) high-dimensional space. This representation of words, also know as word embedding, differs from standard bag-of-words (BoW, TFIDF, etc.) representations in that the meaning of the words is distributed across all the dimensions. Generally speaking, the word embedding algorithms seek to learn a mapping projecting the original BoW representation (simple word index into a given vocabulary) into a lower-dimensional (but still too high for our cause) continuous vector-space, based on their distributional properties observed in some raw text corpus. This distributional semantics approach to word representations is based on the basic idea that linguistic items with similar distributions typically have similar meanings, i.e. words that often appear in a similar context (words that surround them) tend to have similar (vector) representations.
+
+Speciffically, the data you are presented with are vector representations coming from the most popular algorithm for word embedding known as word2vec[^1] by Tomas Mikolov (VUT-Brno alumni). *Word2vec* is a (shallow) neural model learning the projection of BoW word representations into a latent space by the means of gradient descend. Your task is to further reduce the dimensionality of the word representations to get a visual insight into what has been learned.
+
+[^1]: Tomas Mikolov, Ilya Sutskever, Kai Chen, Greg S Corrado, and Jeff Dean. Distributed representations of words and phrases and their compositionality. In *Advances in neural information processing systems*, pages 3111-3119, 2013.
+
+## Data
+You are given 300-dimensional word2vec vector embeddings in the file *data.csv* with corresponding word labels in *labels.txt* for each line. Each of these words comes from one of 10 selected classes of synonyms, which can be recognized (and depicted) w.r.t. labels denoted in the file *colors.csv*
+
+```{r include=FALSE, message=FALSE}
+PlotPoints <- function(X, labels, colors){
+  library(deldir, quietly = TRUE)
+  voronoi <- deldir(X[,1], X[,2])
+  plot(X[,1], X[,2], type="n", asp=1, xlab = "", ylab = "")
+  points(X[,1], X[,2], pch=20, col=colors[,1], cex=1.3)
+  text(X[,1], X[,2], labels = labels[,1], pos = 1, cex = 0.6)
+  plot(voronoi, wlines="tess", wpoints="none", number=FALSE, add=TRUE, lty=1)
+  legend("topleft", legend = sort(unique(colors[,1])), col=sort(unique(colors[,1])), pch=20, cex = 0.8)
+}
+
+Classify <- function(X, colors, kfolds = 50){
+  #install.packages('tree')
+  library(tree)
+  #library(caret)
+  set.seed(17)
+  #add class
+  if(!any(names(X) == "class")){X <- cbind(X, class=as.factor(colors))}
+  #randomly shuffle the data
+  data <-X[sample(nrow(X)),]
+  #Create 10 equally size folds
+  folds <- cut(seq(1,nrow(data)),breaks=kfolds,labels=FALSE)
+  acc <- rep(0, times = kfolds)
+  #10 fold cross validation
+  for(i in 1:kfolds){
+    #Segment your data by fold using the which() function 
+    testIndexes <- which(folds==i,arr.ind=TRUE)
+    testData <- data[testIndexes, ]
+    trainData <- data[-testIndexes, ]
+    model <- tree(formula = class ~., data = trainData)
+    pre <- predict(model, newdata=testData, y = TRUE, type="class")
+    acc[i] <- sum(pre == testData$class)/length(testData$class)
+  }
+  return(acc)
+}
+```
+
+## Tasks
+1. **Load the dataset of 165 words**, each represented as a 300-dimensional vector. Each word is assigned to one of 10 clusters.
+```{r}
+#Load the dataset of 165 words
+mydata <- read.csv('data.csv', header = FALSE)
+mylabels <- read.csv('labels.txt', header = FALSE)
+mycolors <- read.csv('colors.csv', header = FALSE)
+```
+
+The data is in the matrix `mydata`, cluster assignment in `mycolors` and the actual words (useful for visualization) in `mylabels`. You can plot the data by using only the first 2 dimensions. 
+
+```{r}
+PlotPoints(mydata[,c(1,2)], mylabels, mycolors)
+```
+
+2. **Implement ISO-MAP dimensionality reduction procedure**.
+  * Use *k*-NN method to construct the neighborhood graph (sparse matrix).
+    - For simplicity, you can use `get.knn` method available in `FNN` package.
+  * Compute shortest-paths (geodesic) matrix using your favourite algorithm.
+    - Tip: Floyd-Warshall algorithm can be implemented easily here.
+  * Project the geodesic distance matrix into 2D space with (Classical) Multidimensional Scaling (`cmdscale` functions in R).
+  * Challenge: you may simply use PCA to do the same, but be careful to account for a proper normalization (centering) of the geodesic (kernel) matrix (see Kernel PCA for details).
+  
+An expected result (for *k* = 5) should look similar (not necessarily exactly the same) to following
+![Example output](graph_12.pdf)
+
+```{r eval=FALSE}
+#ADD YOUR CODE HERE!
+#REMOVE eval=FALSE arguments
+library(FNN)
+#1.Determine the neighbors of each point (k-NN)
+rows <- nrow(mydata)
+
+firstrowindex <- as.matrix(c(1:rows)) # prvni sloupec indexu predchudcu
+knn <- get.knn(mydata, k = rows - 1) 
+index <- cbind(firstrowindex, knn[["nn.index"]]) # index predchudcu
+distances <- as.matrix(knn[["nn.dist"]])
+
+#2.Construct a neighborhood graph.
+#Each point is connected to other if it is a K nearest neighbor.
+#Edge length equal to Euclidean distance.
+
+constructNeighbors <- function(k) {
+  
+  output <- matrix(Inf, nrow=nrow(index), ncol=ncol(index))
+  for (i in 1:rows) {
+    for (j in 1:k) {
+      output[i, i] = 0
+      neigh_index = index[i,j + 1]
+      output[i, neigh_index] <- distances[i, j]
+      output[neigh_index, i] <- distances[i, j]
+    }
+  }
+  return(output)
+}
+
+output <- constructNeighbors(5)
+
+
+#3.Compute shortest path between two nodes. (Floyd-Warshall algorithm)
+
+# Vlastni floyd
+#for (k in 1:rows) { 
+#    for (i in 1:rows) {
+#      for (j in 1:rows) {
+#       new = output[i, k] + output[k, j]
+#        if (output[i, j] >  new) {
+#          output[i, j] = new
+#        }
+#      }
+#    }
+#}
+
+# Funkce floyd
+D <- floyd(output)
+#4.(classical) multidimensional scaling
+fit <- cmdscale(D,eig=TRUE, k=2)
+PlotPoints(fit$points, mylabels, mycolors)
+```
+
+3. **Visually compare PCA, ISOMAP and t-SNE** by plotting the word2vec data, embedded into 2D using the `Plotpoints` function. Try finding the optimal *k* value for ISOMAP's nearest neighbour.
+```{r eval=FALSE}
+# Visual comparison
+
+Metoda multidimenzionalního škálování byla schopna dobře shluknout růžová (negativní adjektiva) a žlutá slova (pozitivní). 
+Červená slova (citově zabarvené negativní adjektivum) byla rozdělena na dva shluky růžovými body. Pár žlutých slov se vyskytovalo
+vě vyšší vzdálenosti než zbytek. Při pohledu zblízka je možné si ovšem všimnout, že jsou to slova jako 'fair' nebo 'pleasing', což
+jsou mírnější pozitivní slova. Modrá slova, která jsou spojená s mozkovou činností nejsou přímo shluknutá, ale vyskytují se přibližně
+na podobných místech. Stejně tak jako šedá (slova značí začátek něčeho) a černá slova (většinou adjektiva velikosti). 
+Černá slova se ve větším množství vyskytují i vlevo nahoře, v blízkosti červených a růžových slov.
+Tyrkysová slova, která jsou také negativní adjektiva, jsou shluknutá v těsné blízkosti růžových slov. 
+
+Metoda PCA nebyla schopná růžová slova shluknout tolik, jako ta předchozí, zdržují se ale převážně na levé straně grafu. 
+Žlutá slova shlukla dobře, ale je více slov, která se od svého shluku vzdalují (jsou to ta samá slova, která byla vzdálená i nahoře).
+Ostatní barvy jsou více smíšené dohromady, ale vypadá to, že zelená slova (naznačující interakci) jsou v PCA trochu méně
+roztroušená, stejně tak modrá slova a šedá (slovesa naznačující počátek).
+
+U T-SNE si vedla dobře modrá slova, zelená slova a šedá slova (šedá si vedla zřejmě nejlíp zde, vytvořila vlastní shluk). Kromě toho je zbytek bohužel dost roztroušený, a přestože je vidět, že se tečky stejné barvy zdržují někdy na podobných místech. Z tohoto bych předpokládala, že si metoda asi povede nejhůře z těchto tří. 
+```
+
+```{r}
+# Tento blok kodu najde nejlepsi k pro ISOMAP.
+# Vyslo, ze nejlepsi k = 5
+arr <- array()
+for (k in 1:10) {
+  g <- constructNeighbors(k)
+  paths <- floyd(g)
+  if (is.finite(sum(paths))){
+    fitforK <- cmdscale(paths, eig=TRUE, k=2)
+    classif <- Classify(as.data.frame(fitforK$points), mycolors$V1, 50)
+    accuracyIsoMAP <- mean(classif)
+    arr[k] <- mean(accuracyIsoMAP)
+  } else {
+    arr[k] <- 0
+  }
+}
+arr
+
+```
+
+
+```{r}
+
+#Principal component analysis
+fitPCA <- prcomp(mydata, center = TRUE, scale. = TRUE)
+PlotPoints(fitPCA$x[,c(1,2)], mylabels, mycolors)
+```
+
+```{r eval=FALSE}
+#t-SNE (T-Distributed Stochastic Neighbor Embedding)
+#install.packages('tsne')
+library(tsne)
+fittsne <- tsne(mydata, k = 2)
+PlotPoints(fittsne, mylabels, mycolors)
+```
+
+
+4. **Observe the effect of dimensionality reduction on a classiffication algorithm**. The supporting code in a function `Classify` performs training and testing of classification trees and gives the classification accuracy (percentage of correctly classified samples) as its result. Compare the accuracy of prediction on plain data, PCA, ISOMAP and t-SNE.
+```{r eval=FALSE}
+#Plain data
+accPlainData <- Classify(mydata, mycolors$V1, 50)
+
+#classify ISOMAP
+accISOMAP <- Classify(as.data.frame(fit$points), mycolors$V1, 50)
+
+#classify PCA
+accPCA <- Classify(as.data.frame(fitPCA$x), mycolors$V1, 50)
+
+#classify t-SNE
+accTSNE <- Classify(as.data.frame(fittsne), mycolors$V1, 50)
+
+#PLOT results
+print(paste("Plain data:", mean(accPlainData)))
+print(paste("ISOMAP ACC:", mean(accISOMAP)))
+print(paste("PCA ACC:", mean(accPCA)))
+print(paste("t-SNE ACC:", mean(accTSNE)))
+
+Nejhorší accuracy mělo očekávaně plain data, které špatně klasifikovalo přes 50 procent slov. Metody ISOMAP a PCA vyšly srovnatelné, obě kolem 74 procent. Kvůli vzhledu grafu bylo předpokládáno, že t-sne vyjde nejhůř, ale dosáhlo solidních 70 procent. Při změně seedu mi vycházela ISOMAP metoda jako nejlepší, pak PCA. Plain data se zdržovalo vždy kolem 50 procent špatně klasifikovaných slov.   
+
+```
+
