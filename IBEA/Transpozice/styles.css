@@ -1,0 +1,87 @@
+/* 
+Document   : styles
+Created on : Jan 3, 2009, 11:42:23 AM
+Author     : Petr Horsky
+Description:
+Purpose of the stylesheet follows.
+*/
+
+/* 
+Syntax recommendation http://www.w3.org/TR/REC-CSS2/
+*/
+
+root { 
+    display: block;
+}
+
+.gwt-Grid-vowelHighlight{
+    background-color: #99ccff;
+}
+
+.gwt-Grid-captionHighlight{
+    background-color: #33ffcc;
+}
+
+.gwt-Grid-background{
+    background-color: #ffffff;
+}
+
+.gwt-HorizontalSplitPanel {
+}
+
+.gwt-HorizontalSplitPanel .hsplitter {
+    cursor: move;
+    border: 0px;
+    background: #91c0ef;
+}
+
+.gwt-VerticalSplitPanel {
+}
+
+.gwt-VerticalSplitPanel .vsplitter {
+    cursor: move;
+    border: 0px;
+    background: #91c0ef;
+}
+
+.gwt-MainView {
+    border: 10px solid #91c0ef;
+}
+
+.gwt-InputOutputPanel {
+    width: 90%;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.gwt-MatrixGrid {
+    margin: 10px;
+}
+
+.gwt-TextBox {
+    margin: 7px;
+}
+
+.gwt-Button {
+    margin: 7px;
+}
+
+.gwt-SettingsPanel {
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+.gwt-ListBox{
+    margin:7px;
+}
+
+a, a:visited, a:hover {
+    text-decoration: none;
+    color: #1865ff;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+
