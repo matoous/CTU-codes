@@ -1,6 +1,6 @@
-# B4M35KO
+# B4M01MKR
 
-## B4M35KO - Combinatorial Optimization
+## B4M01MKR - Matematická kryptografie
 
 ### Information
 
